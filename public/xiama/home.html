@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8" />
+<title>ホーム - ひらがじゃん</title>
+<link rel="stylesheet" href="/css/style.css" />
+</head>
+<body>
+
+<header style="display:flex; align-items:center; justify-content:space-between; padding:16px 28px;">
+  <div class="title-logo">ひらがじゃん</div>
+  <div style="display:flex; align-items:center; gap:18px;">
+    <div class="online-badge"><span class="online-dot"></span><span id="onlineCount">-</span> 人が接続中</div>
+    <button class="btn" id="profileBtn">プロフィール</button>
+  </div>
+</header>
+
+<main style="display:flex; flex-direction:column; align-items:center; justify-content:center; gap:24px; margin-top:8vh;">
+  <button class="btn primary" style="width:260px; height:56px; font-size:17px;" id="createRoomBtn">部屋を作成</button>
+  <button class="btn" style="width:260px; height:56px; font-size:17px;" id="joinRoomBtn">部屋に参加</button>
+  <button class="btn" style="width:260px; height:56px; font-size:17px;" id="friendBtn">フレンド</button>
+</main>
+
+<!-- プロフィールモーダル -->
+<div class="modal-overlay hidden" id="profileModal">
+  <div class="panel modal">
+    <h2>プロフィール</h2>
+    <p>ユーザー名: <b id="profUsername">-</b></p>
+    <p>ユーザーID: <b id="profUserId">-</b></p>
+    <button class="btn" onclick="closeModal('profileModal')">閉じる</button>
+  </div>
+</div>
+
+<!-- フレンドモーダル -->
+<div class="modal-overlay hidden" id="friendModal">
+  <div class="panel modal">
+    <h2>フレンド</h2>
+    <div style="margin-bottom:16px;">
+      <input type="text" id="searchUserId" placeholder="ユーザーIDで検索" />
+      <button class="btn" onclick="searchUser()">検索</button>
+      <div id="searchResult" style="margin-top:8px;"></div>
+    </div>
+    <h3>届いている申請</h3>
+    <div id="friendRequests">読み込み中...</div>
+    <h3>フレンド一覧</h3>
+    <div id="friendList">読み込み中...</div>
+    <button class="btn" style="margin-top:16px;" onclick="closeModal('friendModal')">閉じる</button>
+  </div>
+</div>
+
+<!-- 部屋参加モーダル -->
+<div class="modal-overlay hidden" id="joinModal">
+  <div class="panel modal">
+    <h2>部屋に参加</h2>
+    <p>4ケタの部屋番号を入力してください</p>
+    <input type="text" id="joinRoomNumber" maxlength="4" placeholder="0000" style="letter-spacing:.3em; font-size:20px; width:140px; text-align:center;" />
+    <div id="joinError" style="color:#ff8f8f; margin-top:8px; font-size:13px;"></div>
+    <div style="margin-top:16px;">
+      <button class="btn primary" onclick="joinRoom()">参加</button>
+      <button class="btn" onclick="closeModal('joinModal')">キャンセル</button>
+    </div>
+  </div>
+</div>
+
+<!-- 部屋作成モーダル(ルール設定) -->
+<div class="modal-overlay hidden" id="createModal">
+  <div class="panel modal">
+    <h2>部屋を作成 - ルール設定</h2>
+    <div style="display:flex; flex-direction:column; gap:14px; margin-top:12px;">
+      <label>人数モード
+        <select id="rulePlayerCount">
+          <option value="1">1人麻雀</option>
+          <option value="2">2人麻雀</option>
+          <option value="3">3人麻雀</option>
+          <option value="4" selected>4人麻雀</option>
+        </select>
+      </label>
+      <label>対局形式
+        <select id="ruleLength">
+          <option value="ichikyoku">一局</option>
+          <option value="tonpuu" selected>東風</option>
+          <option value="hanchan">半荘</option>
+          <option value="honchan">本荘</option>
+        </select>
+      </label>
+      <label>各文字の枚数(2〜8)
+        <input type="number" id="ruleTileCount" min="2" max="8" value="4" style="width:80px;" />
+      </label>
+      <label>持ち時間
+        <select id="ruleTimer">
+          <option value="5+20">5秒 + 持ち時間20秒</option>
+          <option value="5+300">5秒 + 持ち時間300秒</option>
+          <option value="unlimited">無制限</option>
+        </select>
+      </label>
+    </div>
+    <div style="margin-top:20px;">
+      <button class="btn primary" onclick="createRoom()">作成</button>
+      <button class="btn" onclick="closeModal('createModal')">キャンセル</button>
+    </div>
+  </div>
+</div>
+
+<script src="/js/home.js"></script>
+</body>
+</html>

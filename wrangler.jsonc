@@ -1,0 +1,47 @@
+/**
+ * For more details on how to configure Wrangler, refer to:
+ * https://developers.cloudflare.com/workers/wrangler/configuration/
+ */
+{
+	"$schema": "node_modules/wrangler/config-schema.json",
+	"name": "josiahsound",
+	"main": "src/index.ts",
+	"compatibility_date": "2026-09-03",
+	"migrations": [
+		{
+			"tag": "v1",
+			"new_sqlite_classes": [
+				"GameRoom",
+				"Lobby"
+			]
+		}
+	],
+	"durable_objects": {
+		"bindings": [
+			{
+				"class_name": "GameRoom",
+				"name": "GAME_ROOM"
+			},
+			{
+				"class_name": "Lobby",
+				"name": "LOBBY"
+			}
+		]
+	},
+	"d1_databases": [
+		{
+			"binding": "DB",
+			"database_name": "josiahsound-db",
+			"database_id": "f4034336-f5dd-4658-9589-c2a8f32027f1"
+		}
+	],
+	"assets": {
+		"directory": "./public/",
+		"binding": "ASSETS",
+		"html_handling": "auto-trailing-slash"
+	},
+	"observability": {
+		"enabled": true
+	},
+	"upload_source_maps": true
+}

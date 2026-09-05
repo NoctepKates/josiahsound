@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8" />
+<title>部屋待機 - ひらがじゃん</title>
+<link rel="stylesheet" href="/css/style.css" />
+</head>
+<body>
+<header style="display:flex; align-items:center; justify-content:space-between; padding:16px 28px;">
+  <div class="title-logo" style="font-size:20px;">ひらがじゃん</div>
+  <div>部屋番号: <b id="roomNumber" style="font-size:20px; letter-spacing:.2em; color:var(--gold-bright);">----</b></div>
+</header>
+
+<main style="max-width:640px; margin:0 auto; padding:20px;">
+  <div class="panel" style="padding:20px; margin-bottom:20px;">
+    <h3>ルール</h3>
+    <div id="rulesView" style="color:var(--text-sub); font-size:14px; line-height:1.9;"></div>
+  </div>
+
+  <div class="panel" style="padding:20px; margin-bottom:20px;">
+    <h3>参加者 <span id="playerCountLabel"></span></h3>
+    <div id="playerList" style="display:flex; flex-direction:column; gap:8px;"></div>
+  </div>
+
+  <div style="display:flex; gap:12px; justify-content:center;">
+    <button class="btn" id="inviteBtn">フレンドを招待</button>
+    <button class="btn primary" id="readyBtn">準備OK</button>
+    <button class="btn danger" onclick="location.href='/xiama/home'">退出</button>
+  </div>
+</main>
+
+<!-- フレンド招待モーダル -->
+<div class="modal-overlay hidden" id="inviteModal">
+  <div class="panel modal">
+    <h2>フレンドを招待</h2>
+    <div id="inviteFriendList">読み込み中...</div>
+    <p style="color:var(--text-sub); font-size:12px; margin-top:12px;">部屋番号 <b id="inviteRoomNumber"></b> を伝えても参加できます。</p>
+    <button class="btn" onclick="document.getElementById('inviteModal').classList.add('hidden')">閉じる</button>
+  </div>
+</div>
+
+<script src="/js/room.js"></script>
+</body>
+</html>

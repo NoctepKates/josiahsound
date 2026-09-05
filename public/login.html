@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8" />
+<title>ログイン - ひらがじゃん (Josiah Account)</title>
+<link rel="stylesheet" href="/css/style.css" />
+</head>
+<body>
+<div style="min-height:100vh; display:flex; align-items:center; justify-content:center; padding:20px;">
+  <div class="panel" style="padding:32px; width:360px;">
+    <div class="title-logo" style="font-size:22px; text-align:center; margin-bottom:6px;">ひらがじゃん</div>
+    <p style="text-align:center; color:var(--text-sub); font-size:12px; margin-top:0; margin-bottom:22px;">Josiah Account でログイン</p>
+
+    <div id="errorBox" style="color:#ff8f8f; font-size:13px; margin-bottom:12px; display:none;"></div>
+
+    <label style="display:block; font-size:13px; color:var(--text-sub); margin-bottom:4px;">ユーザー名</label>
+    <input id="username" type="text" style="width:100%; margin-bottom:14px;" autocomplete="username" />
+
+    <label style="display:block; font-size:13px; color:var(--text-sub); margin-bottom:4px;">パスワード</label>
+    <input id="password" type="password" style="width:100%; margin-bottom:14px;" autocomplete="current-password" />
+
+    <label style="display:flex; align-items:center; gap:8px; font-size:13px; color:var(--text-sub); margin-bottom:20px;">
+      <input id="remember" type="checkbox" style="width:auto;" />
+      ログイン状態を保存する (remember me)
+    </label>
+
+    <button class="btn primary" style="width:100%;" id="loginBtn">ログイン</button>
+
+    <p style="text-align:center; font-size:13px; color:var(--text-sub); margin-top:18px;">
+      Josiah Account をお持ちでない方は
+      <a href="#" id="toRegister">こちらから登録</a>
+    </p>
+  </div>
+</div>
+
+<script src="/js/auth.js"></script>
+</body>
+</html>

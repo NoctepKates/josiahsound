@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8" />
+<title>対局 - ひらがじゃん</title>
+<link rel="stylesheet" href="/css/style.css" />
+<link rel="stylesheet" href="/css/game.css" />
+</head>
+<body>
+
+<header style="display:flex; align-items:center; justify-content:space-between; padding:8px 24px;">
+  <div class="title-logo" style="font-size:18px;">ひらがじゃん</div>
+  <div id="roundInfo" style="font-size:13px; color:var(--text-sub);"></div>
+</header>
+
+<div class="table-wrap" id="table">
+
+  <!-- 中央コンパス(正方形・牌6枚分の幅) -->
+  <div class="compass" id="compass">
+    <div class="compass-cell cell-empty"></div>
+    <div class="compass-cell cell-top" id="compass-r2"></div>
+    <div class="compass-cell cell-empty"></div>
+
+    <div class="compass-cell cell-left" id="compass-r3"></div>
+    <div class="compass-cell cell-center" id="wallDigits"></div>
+    <div class="compass-cell cell-right" id="compass-r1"></div>
+
+    <div class="compass-cell cell-empty"></div>
+    <div class="compass-cell cell-bottom" id="compass-self"></div>
+    <div class="compass-cell cell-empty"></div>
+  </div>
+
+  <!-- 川(コンパスの各辺に密着) -->
+  <div class="river river-bottom" id="river-self"></div>
+  <div class="river river-right" id="river-r1"></div>
+  <div class="river river-top" id="river-r2"></div>
+  <div class="river river-left" id="river-r3"></div>
+
+  <!-- 座席(手牌・鳴きのみ) -->
+  <div class="seat bottom" id="seat-self">
+    <div class="meld-row" id="meld-self"></div>
+    <div class="hand-row" id="hand-self"></div>
+  </div>
+  <div class="seat right" id="seat-r1">
+    <div class="meld-row" id="meld-r1"></div>
+    <div class="hand-row" id="hand-r1"></div>
+  </div>
+  <div class="seat top" id="seat-r2">
+    <div class="meld-row" id="meld-r2"></div>
+    <div class="hand-row" id="hand-r2"></div>
+  </div>
+  <div class="seat left" id="seat-r3">
+    <div class="meld-row" id="meld-r3"></div>
+    <div class="hand-row" id="hand-r3"></div>
+  </div>
+
+  <!-- ユーザー名タグ(画面四隅に固定。回転の影響を受けない) -->
+  <div class="player-tag corner-self" id="tag-self"></div>
+  <div class="player-tag corner-r1" id="tag-r1"></div>
+  <div class="player-tag corner-r2" id="tag-r2"></div>
+  <div class="player-tag corner-r3" id="tag-r3"></div>
+</div>
+
+<div class="action-bar" id="actionBar"></div>
+
+<!-- 鳴き選択 -->
+<div class="modal-overlay hidden" id="callModal">
+  <div class="panel modal" style="text-align:center;">
+    <h3>鳴きますか？</h3>
+    <div id="callCandidates" style="display:flex; flex-direction:column; gap:8px; margin:14px 0;"></div>
+    <button class="btn" onclick="respondCall(false)">スルー</button>
+  </div>
+</div>
+
+<!-- 結果表示 -->
+<div class="result-overlay hidden" id="resultOverlay">
+  <div class="panel result-card" id="resultCard"></div>
+</div>
+
+<script src="/js/table.js"></script>
+</body>
+</html>
