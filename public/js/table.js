@@ -11,7 +11,11 @@ let dragFromIdx = null;
 // そのまま毎回描画に使わず、この配列を「表示上の真実」として持ち回す)
 let handOrder = [];
 
-const SEAT_DIV_ORDER = ['self', 'r1', 'r2', 'r3']; // 自分から見て 自分/下家/対面/上家
+const SEAT_DIV_ORDER = ['self', 'r1', 'r2', 'r3'];
+const SCREEN_DIV_BY_RELATIVE_WIND = ['self', 'r1', 'r2', 'r3'];
+// 自分から見て:
+// 0 = 自分(下), 1 = 右, 2 = 対面(上), 3 = 左
+ // 自分から見て 自分/下家/対面/上家
 const WIND_KANJI = ['東', '南', '西', '北'];
 const SEVEN_SEG = {
   '0': 'abcdef', '1': 'bc', '2': 'abged', '3': 'abgcd', '4': 'fgbc',
@@ -98,7 +102,15 @@ function render(s) {
   }
 
   for (let i = 0; i < 4; i++) {
-    const divKey = SEAT_DIV_ORDER[i];
+    const myWindIdx = my === -1
+  ? 0
+  : (my - s.dealerSeat + n) % n;
+    const windIdx = (seatNum - s.dealerSeat + n) % n;
+    const relativeWind = (windIdx - myWindIdx + 4) % 4;
+
+    const divKey = my === -1
+  ? SEAT_DIV_ORDER[i]
+  : SCREEN_DIV_BY_RELATIVE_WIND[relativeWind];
     const seatEl = document.getElementById('seat-' + divKey);
     const riverEl = document.getElementById('river-' + divKey);
     const compassEl = document.getElementById('compass-' + divKey);

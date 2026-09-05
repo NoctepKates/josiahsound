@@ -12,9 +12,9 @@
     "bcryptjs": "^2.4.3"
   },
   "devDependencies": {
-    "typescript": "^5.5.0",
-    "wrangler": "^3.78.0",
     "@cloudflare/workers-types": "^4.20240909.0",
-    "@types/bcryptjs": "^2.4.6"
+    "@types/bcryptjs": "^2.4.6",
+    "typescript": "^5.5.0",
+    "wrangler": "^3.78.0"
   }
 }

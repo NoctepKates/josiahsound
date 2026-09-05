@@ -53,14 +53,19 @@ html, body { height: 100%; overflow: hidden; }
 .seg-e { bottom: 1px; left: 0; }
 .seg-c { bottom: 1px; right: 0; }
 
+#wallDigits {
+  grid-column: 2;
+  grid-row: 2;
+}
+
 /* ---------- 座席(手牌・鳴きのみ。ユーザー名は別要素) ---------- */
 .seat {
   position: absolute; display: flex; flex-direction: column; align-items: center; gap: 4px;
 }
 .seat.bottom { bottom: 3%; left: 50%; transform: translateX(-50%); }
-.seat.right { right: 1.5%; top: 50%; transform: translateY(-50%) rotate(-90deg); transform-origin: right center; }
+.seat.right { right: 1.5%; top: 50%; transform: translateY(-50%) rotate(-90deg); transform-origin: center center;}
 .seat.top { top: 3%; left: 50%; transform: translateX(-50%) rotate(180deg); }
-.seat.left { left: 1.5%; top: 50%; transform: translateY(-50%) rotate(90deg); transform-origin: left center; }
+.seat.left { left: 1.5%; top: 50%; transform: translateY(-50%) rotate(90deg); transform-origin: center center;}
 
 .hand-row { display: flex; gap: var(--tile-gap); min-height: 58px; }
 .meld-row { display: flex; gap: 4px; margin-bottom: 4px; }

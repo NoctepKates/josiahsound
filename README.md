@@ -1,6 +1,7 @@
-# ひらがじゃん
+# 下麻
 
-Cloudflare Workers + Durable Objects + D1 で作るオリジナル麻雀「ひらがじゃん」。
+Cloudflare Workers + Durable Objects + D1 で作成　ひらがじゃんをベースにした麻雀ゲーム下麻。
+Claudeに作ってもらった
 
 ## セットアップ
 
