@@ -11,11 +11,15 @@ let dragFromIdx = null;
 // そのまま毎回描画に使わず、この配列を「表示上の真実」として持ち回す)
 let handOrder = [];
 
-const SEAT_DIV_ORDER = ['self', 'r1', 'r2', 'r3'];
-const SCREEN_DIV_BY_RELATIVE_WIND = ['self', 'r1', 'r2', 'r3'];
-// 自分から見て:
-// 0 = 自分(下), 1 = 右, 2 = 対面(上), 3 = 左
- // 自分から見て 自分/下家/対面/上家
+const SEAT_DIV_ORDER = ['self', 'r1', 'r2', 'r3']; // 自分から見て 自分/下家/対面/上家
+// 人数ごとに、どの座席枠(div)を使うか。
+// 2人打ちでは相手を「左」に、3人打ちでは「右・左」に配置し、対面(上)は使わない。
+const DIV_KEYS_BY_COUNT = {
+  1: ['self'],
+  2: ['self', 'r3'],
+  3: ['self', 'r1', 'r3'],
+  4: ['self', 'r1', 'r2', 'r3'],
+};
 const WIND_KANJI = ['東', '南', '西', '北'];
 const SEVEN_SEG = {
   '0': 'abcdef', '1': 'bc', '2': 'abged', '3': 'abgcd', '4': 'fgbc',
@@ -101,21 +105,15 @@ function render(s) {
     reconcileHandOrder(hand);
   }
 
-  for (let i = 0; i < 4; i++) {
-    const myWindIdx = my === -1
-  ? 0
-  : (my - s.dealerSeat + n) % n;
-    const windIdx = (seatNum - s.dealerSeat + n) % n;
-    const relativeWind = (windIdx - myWindIdx + 4) % 4;
+  const activeDivKeys = DIV_KEYS_BY_COUNT[n] || DIV_KEYS_BY_COUNT[4];
 
-    const divKey = my === -1
-  ? SEAT_DIV_ORDER[i]
-  : SCREEN_DIV_BY_RELATIVE_WIND[relativeWind];
+  for (const divKey of SEAT_DIV_ORDER) {
     const seatEl = document.getElementById('seat-' + divKey);
     const riverEl = document.getElementById('river-' + divKey);
     const compassEl = document.getElementById('compass-' + divKey);
     const tagEl = document.getElementById('tag-' + divKey);
-    if (i >= n) {
+    const activeIdx = activeDivKeys.indexOf(divKey);
+    if (activeIdx === -1) {
       [seatEl, riverEl, compassEl, tagEl].forEach((el) => { if (el) el.style.display = 'none'; });
       continue;
     }
@@ -124,7 +122,7 @@ function render(s) {
     if (compassEl) compassEl.style.display = 'flex';
     if (tagEl) tagEl.style.display = 'flex';
 
-    const seatNum = my === -1 ? i : (my + i) % n;
+    const seatNum = my === -1 ? activeIdx : (my + activeIdx) % n;
     const p = s.players[seatNum];
     if (!p) continue;
 
@@ -153,7 +151,7 @@ function render(s) {
       handEl.innerHTML = mainTiles.join('') + drawnTileHtml;
       attachHandHandlers(handEl);
     } else {
-      handEl.innerHTML = Array.from({ length: p.handCount }).map(() => tileHtml(null, false, false)).join('');
+      handEl.innerHTML = Array.from({ length: p.handCount }).map(() => tileHtml(null, false, false, true)).join('');
     }
 
     // 川

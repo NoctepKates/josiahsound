@@ -26,6 +26,13 @@ html, body { height: 100%; overflow: hidden; }
   border: 1px solid rgba(217,180,106,.35);
   border-radius: 8px;
 }
+/* グリッドの自動配置(DOM順)に頼らず、各セルの位置を明示的に固定する。
+   こうすることで、非表示(display:none)になるセルがあっても他のセルの位置がズレない。 */
+.cell-center { grid-column: 2; grid-row: 2; }
+.cell-top { grid-column: 2; grid-row: 1; }
+.cell-right { grid-column: 3; grid-row: 2; }
+.cell-bottom { grid-column: 2; grid-row: 3; }
+.cell-left { grid-column: 1; grid-row: 2; }
 .compass-cell { display: flex; flex-direction: column; align-items: center; justify-content: center; }
 .compass-cell .wind { font-size: 20px; font-weight: 900; color: var(--gold-bright); line-height: 1; }
 .compass-cell .score { font-size: 11px; color: var(--text-sub); margin-top: 2px; }
@@ -53,19 +60,14 @@ html, body { height: 100%; overflow: hidden; }
 .seg-e { bottom: 1px; left: 0; }
 .seg-c { bottom: 1px; right: 0; }
 
-#wallDigits {
-  grid-column: 2;
-  grid-row: 2;
-}
-
 /* ---------- 座席(手牌・鳴きのみ。ユーザー名は別要素) ---------- */
 .seat {
   position: absolute; display: flex; flex-direction: column; align-items: center; gap: 4px;
 }
 .seat.bottom { bottom: 3%; left: 50%; transform: translateX(-50%); }
-.seat.right { right: 1.5%; top: 50%; transform: translateY(-50%) rotate(-90deg); transform-origin: center center;}
+.seat.right { right: 1.5%; top: 50%; transform: translateY(-50%) rotate(-90deg); transform-origin: right center; }
 .seat.top { top: 3%; left: 50%; transform: translateX(-50%) rotate(180deg); }
-.seat.left { left: 1.5%; top: 50%; transform: translateY(-50%) rotate(90deg); transform-origin: center center;}
+.seat.left { left: 1.5%; top: 50%; transform: translateY(-50%) rotate(90deg); transform-origin: left center; }
 
 .hand-row { display: flex; gap: var(--tile-gap); min-height: 58px; }
 .meld-row { display: flex; gap: 4px; margin-bottom: 4px; }
