@@ -1,7 +1,7 @@
 :root {
   --tile-w: 30px;
   --tile-gap: 3px;
-  --compass-size: 195px; /* 牌6枚分(30px)+隙間5個分(3px) = 195px の正方形 */
+  --compass-size: 195px;
 }
 
 html, body { height: 100%; overflow: hidden; }
@@ -14,7 +14,6 @@ html, body { height: 100%; overflow: hidden; }
   box-shadow: inset 0 0 60px rgba(0,0,0,.6), 0 10px 40px rgba(0,0,0,.6);
 }
 
-/* ---------- 中央コンパス(正方形・3x3グリッド) ---------- */
 .compass {
   position: absolute; top: 50%; left: 50%;
   width: var(--compass-size); height: var(--compass-size);
@@ -26,8 +25,6 @@ html, body { height: 100%; overflow: hidden; }
   border: 1px solid rgba(217,180,106,.35);
   border-radius: 8px;
 }
-/* グリッドの自動配置(DOM順)に頼らず、各セルの位置を明示的に固定する。
-   こうすることで、非表示(display:none)になるセルがあっても他のセルの位置がズレない。 */
 .cell-center { grid-column: 2; grid-row: 2; }
 .cell-top { grid-column: 2; grid-row: 1; }
 .cell-right { grid-column: 3; grid-row: 2; }
@@ -45,7 +42,6 @@ html, body { height: 100%; overflow: hidden; }
 .riichi-stick.active { opacity: 1; }
 .cell-center { background: #050a08; border-radius: 6px; margin: 4px; box-shadow: inset 0 0 10px rgba(0,0,0,.9); }
 
-/* ---------- 七セグ風デジタル数字(山の残り枚数) ---------- */
 .digit-group { display: flex; gap: 3px; }
 .digit { position: relative; width: 13px; height: 22px; }
 .seg { position: absolute; background: #3a1010; border-radius: 1px; }
@@ -60,34 +56,107 @@ html, body { height: 100%; overflow: hidden; }
 .seg-e { bottom: 1px; left: 0; }
 .seg-c { bottom: 1px; right: 0; }
 
-/* ---------- 座席(手牌・鳴きのみ。ユーザー名は別要素) ---------- */
+/*
+ * 座席は「中央揃え」ではなく固定幅の左端基準にする。
+ * これで13枚→14枚になったときにも手牌全体が左右にずれない。
+ * また、手牌/鳴きは川より前面に出す。
+ */
 .seat {
-  position: absolute; display: flex; flex-direction: column; align-items: center; gap: 4px;
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  z-index: 5;
 }
-.seat.bottom { bottom: 3%; left: 50%; transform: translateX(-50%); }
-.seat.right { right: 1.5%; top: 50%; transform: translateY(-50%) rotate(-90deg); transform-origin: right center; }
-.seat.top { top: 3%; left: 50%; transform: translateX(-50%) rotate(180deg); }
-.seat.left { left: 1.5%; top: 50%; transform: translateY(-50%) rotate(90deg); transform-origin: left center; }
+.seat.bottom {
+  bottom: 3%;
+  left: 50%;
+  width: min(641px, calc(100% - 20px));
+  transform: translateX(-50%);
+}
+.seat.right {
+  right: 1.5%;
+  top: 50%;
+  width: min(430px, calc(100% - 20px));
+  transform: translateY(-50%) rotate(-90deg);
+  transform-origin: right center;
+}
+.seat.top {
+  top: 3%;
+  left: 50%;
+  width: min(430px, calc(100% - 20px));
+  transform: translateX(-50%) rotate(180deg);
+  transform-origin: center center;
+}
+.seat.left {
+  left: 1.5%;
+  top: 50%;
+  width: min(430px, calc(100% - 20px));
+  transform: translateY(-50%) rotate(90deg);
+  transform-origin: left center;
+}
 
-.hand-row { display: flex; gap: var(--tile-gap); min-height: 58px; }
-.meld-row { display: flex; gap: 4px; margin-bottom: 4px; }
+.hand-row {
+  display: flex;
+  flex-wrap: nowrap;
+  justify-content: flex-start;
+  align-items: flex-end;
+  gap: var(--tile-gap);
+  min-height: 58px;
+  width: max-content;
+}
+.meld-row {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 4px;
+  margin-bottom: 4px;
+  width: max-content;
+}
 
 .tile.dragging { opacity: .35; }
 .tile.drop-target { box-shadow: 0 0 0 2px var(--gold-bright); }
 .tile.drawn-tile { margin-left: 14px; }
 
-/* ---------- 川(捨て牌): コンパスの各辺にぴったり密着 ---------- */
+/*
+ * 川はコンパス外周から外向きに伸びる。
+ * z-indexを手牌より下にして、長くなった川が手牌を覆わないようにする。
+ */
 .river {
-  position: absolute; display: grid;
-  grid-template-columns: repeat(6, var(--tile-w)); gap: var(--tile-gap);
+  position: absolute;
+  display: grid;
+  grid-template-columns: repeat(6, var(--tile-w));
+  gap: var(--tile-gap);
   z-index: 4;
+  pointer-events: none;
 }
-.river.river-bottom { top: calc(50% + var(--compass-size) / 2); left: 50%; transform: translateX(-50%); margin-top: 4px; }
-.river.river-top { top: calc(50% - var(--compass-size) / 2); left: 50%; transform: translate(-50%, -100%) rotate(180deg); margin-bottom: 4px; }
-.river.river-right { left: calc(50% + var(--compass-size) / 2); top: 50%; transform: translateY(-50%) rotate(-90deg); transform-origin: left center; margin-left: 4px; }
-.river.river-left { right: calc(50% + var(--compass-size) / 2); top: 50%; transform: translateY(-50%) rotate(90deg); transform-origin: right center; margin-right: 4px; }
+.river.river-bottom {
+  top: calc(50% + var(--compass-size) / 2);
+  left: 50%;
+  transform: translateX(-50%);
+  margin-top: 4px;
+}
+.river.river-top {
+  top: calc(50% - var(--compass-size) / 2);
+  left: 50%;
+  transform: translate(-50%, -100%) rotate(180deg);
+  margin-bottom: 4px;
+}
+.river.river-right {
+  left: calc(50% + var(--compass-size) / 2);
+  top: 50%;
+  transform: translateY(-50%) rotate(-90deg);
+  transform-origin: left center;
+  margin-left: 4px;
+}
+.river.river-left {
+  right: calc(50% + var(--compass-size) / 2);
+  top: 50%;
+  transform: translateY(-50%) rotate(90deg);
+  transform-origin: right center;
+  margin-right: 4px;
+}
 
-/* ---------- ユーザー名タグ(画面四隅・回転の影響を受けない) ---------- */
 .player-tag {
   position: absolute; font-size: 12px; color: var(--text-sub);
   background: rgba(0,0,0,.45); padding: 4px 10px; border-radius: 8px;

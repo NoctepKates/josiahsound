@@ -7,13 +7,9 @@ let canTsumoNow = false;
 let reconnectAttempts = 0;
 let dragFromIdx = null;
 
-// 自分の手牌の表示順(ドラッグ並び替えの結果を保持するため、サーバーから来る配列を
-// そのまま毎回描画に使わず、この配列を「表示上の真実」として持ち回す)
 let handOrder = [];
 
-const SEAT_DIV_ORDER = ['self', 'r1', 'r2', 'r3']; // 自分から見て 自分/下家/対面/上家
-// 人数ごとに、どの座席枠(div)を使うか。
-// 2人打ちでは相手を「左」に、3人打ちでは「右・左」に配置し、対面(上)は使わない。
+const SEAT_DIV_ORDER = ['self', 'r1', 'r2', 'r3'];
 const DIV_KEYS_BY_COUNT = {
   1: ['self'],
   2: ['self', 'r3'],
@@ -69,10 +65,6 @@ function connect() {
   };
 }
 
-// ---------- 手牌の表示順管理(ドラッグ並び替え対応) ----------
-// ツモ牌(yourDrawnTile)は除いた「持ち手13枚相当」の並びだけをhandOrderで管理する。
-// サーバーの最新情報(counts)と突き合わせて、既存の並びをできる限り維持しつつ
-// 増減分だけを反映する。
 function reconcileHandOrder(newKinds) {
   const remaining = [...newKinds];
   const kept = [];
@@ -94,7 +86,6 @@ function render(s) {
     `第${s.round}局 (${s.honba}本場) / ドラ表示: ${s.doraIndicators.join(' ')}`;
   document.getElementById('wallDigits').innerHTML = sevenSegNumber(s.wallRemaining, 2);
 
-  // 自分の手牌: ツモ牌を1枚分離し、残りをhandOrderで管理する
   let drawnKind = null;
   if (my !== -1) {
     const hand = [...s.yourHand];
@@ -113,6 +104,7 @@ function render(s) {
     const compassEl = document.getElementById('compass-' + divKey);
     const tagEl = document.getElementById('tag-' + divKey);
     const activeIdx = activeDivKeys.indexOf(divKey);
+
     if (activeIdx === -1) {
       [seatEl, riverEl, compassEl, tagEl].forEach((el) => { if (el) el.style.display = 'none'; });
       continue;
@@ -122,18 +114,19 @@ function render(s) {
     if (compassEl) compassEl.style.display = 'flex';
     if (tagEl) tagEl.style.display = 'flex';
 
-    const seatNum = my === -1 ? activeIdx : (my + activeIdx) % n;
+    // 画面上の「右側(r1)」を下家とする。
+    // 座席番号は時計回りではなく、プレイヤーの次番が (seat - 1) になるため、
+    // 自分視点では r1=一つ前のseat、r2=二つ前、r3=三つ前にする。
+    const seatNum = my === -1 ? activeIdx : (my - activeIdx + n) % n;
     const p = s.players[seatNum];
     if (!p) continue;
 
     const isDealer = seatNum === s.dealerSeat;
     const windIdx = (seatNum - s.dealerSeat + n) % n;
 
-    // ユーザー名タグ(画面四隅固定)
     tagEl.className = 'player-tag corner-' + divKey + (p.riichi ? ' riichi' : '');
     tagEl.innerHTML = `${isDealer ? '<span class="dealer-mark">親</span> ' : ''}${p.username}${p.connected ? '' : ' (切断)'}`;
 
-    // コンパス(自風・点数・リー棒置き場のみ。ユーザー名は表示しない)
     if (compassEl) {
       compassEl.classList.toggle('dealer', isDealer);
       compassEl.innerHTML = `
@@ -143,25 +136,27 @@ function render(s) {
       `;
     }
 
-    // 手牌
     const handEl = document.getElementById('hand-' + divKey);
     if (divKey === 'self') {
       const mainTiles = handOrder.map((kind, idx) => tileHtml(kind, kind === selectedTileId, true, false, idx));
-      const drawnTileHtml = drawnKind ? tileHtml(drawnKind, drawnKind === selectedTileId && !handOrder.includes(selectedTileId), true, false, -1, true) : '';
+      const drawnTileHtml = drawnKind
+        ? tileHtml(drawnKind, drawnKind === selectedTileId && !handOrder.includes(selectedTileId), true, false, -1, true)
+        : '';
       handEl.innerHTML = mainTiles.join('') + drawnTileHtml;
       attachHandHandlers(handEl);
     } else {
-      handEl.innerHTML = Array.from({ length: p.handCount }).map(() => tileHtml(null, false, false, true)).join('');
+      handEl.innerHTML = Array.from({ length: p.handCount })
+        .map(() => tileHtml(null, false, false, true)).join('');
     }
 
-    // 川
     if (riverEl) {
       riverEl.innerHTML = p.discards.map((k) => tileHtml(k, false, false, true)).join('');
     }
 
-    // 鳴き
     const meldEl = document.getElementById('meld-' + divKey);
-    meldEl.innerHTML = p.melds.map((m) => `<div style="display:flex; gap:2px;">${m.tiles.map((k) => tileHtml(k, false, false)).join('')}</div>`).join('');
+    meldEl.innerHTML = p.melds.map((m) =>
+      `<div style="display:flex; gap:2px;">${m.tiles.map((k) => tileHtml(k, false, false)).join('')}</div>`
+    ).join('');
   }
 
   renderActionBar();
@@ -173,13 +168,12 @@ function tileHtml(kind, selected, selectable, small, idx, isDrawn) {
   if (!kind) cls.push('back');
   if (selected) cls.push('selected');
   if (isDrawn) cls.push('drawn-tile');
-  const dataAttrs = selectable ? `data-kind="${kind}" data-idx="${idx}" ${isDrawn ? 'data-drawn="1"' : ''} draggable="true"` : '';
+  const dataAttrs = selectable
+    ? `data-kind="${kind}" data-idx="${idx}" ${isDrawn ? 'data-drawn="1"' : ''} draggable="true"`
+    : '';
   return `<div class="${cls.join(' ')}" ${dataAttrs}>${kind || ''}</div>`;
 }
 
-// 牌を1回クリックで選択、選択中の牌をもう一度クリックすると即打牌する。
-// ドラッグ&ドロップで並び替えもできる(ツモ牌を含めて自由に並び替え可能。
-// 並び替え後にツモ牌をどこかへ動かした場合は「ツモ牌の間隔」は解除される)。
 function attachHandHandlers(handEl) {
   const tiles = [...handEl.querySelectorAll('.tile[data-kind]')];
   tiles.forEach((el) => {
@@ -189,7 +183,7 @@ function attachHandHandlers(handEl) {
     el.onclick = () => {
       if (el.classList.contains('selected')) {
         selectedTileId = kind;
-        doDiscard(isDrawn);
+        doDiscard();
         return;
       }
       handEl.querySelectorAll('.tile').forEach((t) => t.classList.remove('selected'));
@@ -208,9 +202,9 @@ function attachHandHandlers(handEl) {
       el.classList.remove('drop-target');
       const toIdx = isDrawn ? handOrder.length : Number(el.dataset.idx);
       if (dragFromIdx === null) return;
+
       let moved;
       if (dragFromIdx === 'drawn') {
-        // ツモ牌をhandOrderの中に組み込む(以後は通常の手牌として並び替え対象になる)
         moved = state.yourDrawnTile;
       } else {
         moved = handOrder.splice(dragFromIdx, 1)[0];
@@ -223,26 +217,40 @@ function attachHandHandlers(handEl) {
   });
 }
 
-// サーバー通信を伴わない、手牌部分のみの再描画(並び替え直後の即時反映用)
 function renderHandOnly() {
   if (!state) return;
   const handEl = document.getElementById('hand-self');
-  handEl.innerHTML = handOrder.map((kind, idx) => tileHtml(kind, kind === selectedTileId, true, false, idx)).join('');
+  handEl.innerHTML = handOrder.map((kind, idx) =>
+    tileHtml(kind, kind === selectedTileId, true, false, idx)
+  ).join('');
   attachHandHandlers(handEl);
 }
 
-// リーチ可能かどうかの簡易判定(門前・未リーチ・点数1000以上・残り牌4枚以上)
-// ※ 本来はその牌を切った後に手牌がテンパイするかまで判定すべきだが、
-//   クライアント側では簡略化した条件のみでボタンの表示可否を決めている。
+// サーバーが riichiDiscards を送る版ではそれを使用する。
+// 未対応サーバーでもボタン自体は表示できるようにフォールバックするが、
+// 実際のリーチ成立条件は必ずサーバー側で検証する。
 function canDeclareRiichi() {
   if (!state || state.yourSeat === -1) return false;
   const me = state.players[state.yourSeat];
-  if (!me) return false;
-  if (me.riichi) return false;
-  if (me.melds.length > 0) return false;
-  if (me.score < 1000) return false;
+  if (!me || me.riichi || me.melds.length > 0 || me.score < 1000) return false;
   if (state.wallRemaining < 4) return false;
-  return true;
+  return Array.isArray(state.riichiDiscards) && state.riichiDiscards.length > 0;
+}
+
+function doDiscard() {
+  if (!selectedTileId) return;
+
+  if (riichiMode) {
+    const legal = Array.isArray(state?.riichiDiscards) && state.riichiDiscards.includes(selectedTileId);
+    if (!legal) {
+      alert('その牌を切ってもテンパイにならないため、リーチできません。');
+      return;
+    }
+  }
+
+  ws.send(JSON.stringify({ type: 'discard', tileId: selectedTileId, riichi: riichiMode }));
+  selectedTileId = null;
+  riichiMode = false;
 }
 
 function renderActionBar() {
@@ -267,13 +275,6 @@ function renderActionBar() {
     tsumoBtn.onclick = () => ws.send(JSON.stringify({ type: 'tsumoWin' }));
     bar.appendChild(tsumoBtn);
   }
-}
-
-function doDiscard() {
-  if (!selectedTileId) return;
-  // yourHand は kind の配列のみ持っているため、サーバー側は同名複数所持でも先頭一致で処理する
-  ws.send(JSON.stringify({ type: 'discard', tileId: selectedTileId, riichi: riichiMode }));
-  selectedTileId = null; riichiMode = false;
 }
 
 function showRonPrompt(tile) {
@@ -339,11 +340,10 @@ function showMatchEnd(msg) {
   document.getElementById('resultOverlay').classList.remove('hidden');
 }
 
-// ---------- 七セグ風デジタル数字描画 ----------
 function digitHtml(ch) {
   const segs = SEVEN_SEG[ch] || '';
   const all = ['a', 'b', 'c', 'd', 'e', 'f', 'g'];
-  return `<div class="digit">${all.map((seg) => `<div class="seg seg-${seg} ${segs.includes(seg) ? 'on' : ''}"></div>`).join('')}</div>`;
+  return `<div class="digit">${all.map((seg) => `<div class="seg seg-${seg} ${segs.includes(seg) ? 'on' : ''}></div>`).join('')}</div>`;
 }
 function sevenSegNumber(n, minDigits) {
   const str = String(Math.max(0, n)).padStart(minDigits || 1, '0');

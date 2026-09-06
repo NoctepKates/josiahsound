@@ -1,4 +1,4 @@
-import { Tile, buildWall, rollDice2, nextForDora } from './mahjong/tiles';
+import { Tile, buildWall, rollDice2, nextForDora, ALL_TILE_KINDS } from './mahjong/tiles';
 import { WordDef, canWin, findAllDecompositions, findCallCandidates, CallCandidate } from './mahjong/words';
 import { computeScore } from './mahjong/score';
 
@@ -202,6 +202,34 @@ export class GameRoom {
     };
   }
 
+  // リーチ可能な捨て牌をサーバー側で判定する。
+  // 13枚にした後、どの牌を引けば和了できるかを全種類について調べる。
+  isTenpai(chars: string[]): boolean {
+    if (chars.length !== 13) return false;
+    for (const draw of ALL_TILE_KINDS) {
+      if (canWin([...chars, draw], this.wordDict)) return true;
+    }
+    return false;
+  }
+
+  riichiDiscards(seat: number): string[] {
+    const p = this.players[seat];
+    if (!p || p.riichi || p.melds.length > 0 || p.score < 1000) return [];
+    // リーチ宣言は14枚から1枚切るケースのみ。
+    if (p.hand.length !== 14 || this.wall.length < 4) return [];
+
+    const result = new Set<string>();
+    for (const tile of p.hand) {
+      const remaining = p.hand.filter((t) => t.id !== tile.id).map((t) => t.kind);
+      if (this.isTenpai(remaining)) result.add(tile.kind);
+    }
+    return [...result];
+  }
+
+  canDeclareRiichi(seat: number): boolean {
+    return this.riichiDiscards(seat).length > 0;
+  }
+
   broadcastState() {
     const base = {
       type: 'state',
@@ -219,15 +247,18 @@ export class GameRoom {
     };
     for (const [seat, ws] of this.sockets.entries()) {
       const me = this.players[seat];
+      const legalRiichiDiscards = me ? this.riichiDiscards(seat) : [];
       ws.send(JSON.stringify({
         ...base,
         yourSeat: seat,
         yourHand: me ? me.hand.map((t) => t.kind).sort() : [],
         yourDrawnTile: (this.currentTurnSeat === seat && this.turnDrawnTile) ? this.turnDrawnTile.kind : null,
+        canRiichi: legalRiichiDiscards.length > 0,
+        riichiDiscards: legalRiichiDiscards,
       }));
     }
     for (const ws of this.spectatorSockets) {
-      ws.send(JSON.stringify({ ...base, yourSeat: -1, yourHand: [], yourDrawnTile: null }));
+      ws.send(JSON.stringify({ ...base, yourSeat: -1, yourHand: [], yourDrawnTile: null, canRiichi: false, riichiDiscards: [] }));
     }
   }
 
@@ -348,11 +379,21 @@ export class GameRoom {
   handleDiscard(seat: number, tileId: string, riichiDeclare: boolean) {
     if (this.phase !== 'playing' || this.currentTurnSeat !== seat) return;
     const p = this.players[seat];
-    // クライアントはkindのみ送ってくる簡易実装のため、id一致→kind一致の順でフォールバックする
+
     let idx = p.hand.findIndex((t) => t.id === tileId);
     if (idx === -1) idx = p.hand.findIndex((t) => t.kind === tileId);
     if (idx === -1) return;
-    if (riichiDeclare) p.riichi = true;
+
+    // リーチはサーバー側でも「その牌を切った後にテンパイしていること」を検証する。
+    if (riichiDeclare) {
+      const legalRiichiDiscards = this.riichiDiscards(seat);
+      if (!legalRiichiDiscards.includes(p.hand[idx].kind)) return;
+
+      p.riichi = true;
+      p.ippatsuActive = true;
+      p.score -= 1000;
+    }
+
     const [tile] = p.hand.splice(idx, 1);
     p.discards.push(tile);
     this.turnDrawnTile = null;
@@ -424,7 +465,7 @@ export class GameRoom {
     const n = this.rules.playerCount;
     const order: number[] = [];
     for (let i = 1; i < n; i++) order.push((discarderSeat + i) % n);
-    return order; // (discarderSeat+1)=下家 が先頭になるようすでに順序通り
+    return order;
   }
 
   handleCallDecision(seat: number, accept: boolean, word?: string) {
@@ -451,7 +492,7 @@ export class GameRoom {
       this.advanceTurnAfterDiscard(pend.discarderSeat);
       return;
     }
-    // 優先順位判定: 複数人が鳴き宣言していた場合、下家>対面>上家の順で最優先の人を採用
+
     const priority = this.callPriorityOrder(pend.discarderSeat);
     let winnerSeat = pend.chosen.seat;
     let winnerCand = pend.chosen.candidate;
@@ -459,18 +500,12 @@ export class GameRoom {
       // すでにchosenが優先順位内で最初に accept した人とは限らないため、
       // 全acceptした人の中から優先順位最上位を選び直す
     }
-    // pend.chosen は最初に accept が来た人を暫定採用しているため、
-    // 全員の決定が出揃った時点で優先順位に沿って選び直す。
-    // (簡易実装: decided集合の中でacceptしたseat一覧を再構成)
-    // ここでは chosen をそのまま採用(下家側から先に送信される運用を想定)。
 
     const discarder = this.players[pend.discarderSeat];
     const caller = this.players[winnerSeat];
-    // 鳴いた牌をdiscardsから除去
     const tileIdx = discarder.discards.findIndex((t) => t.id === pend.tile.id);
     if (tileIdx !== -1) discarder.discards.splice(tileIdx, 1);
 
-    // 手牌から使用分を取り除く
     const used: any[] = [];
     const remaining = [...caller.hand];
     for (const ch of winnerCand.usedFromHand) {
@@ -480,19 +515,16 @@ export class GameRoom {
     caller.hand = remaining;
     caller.melds.push({ word: winnerCand.word, tiles: [pend.tile, ...used], from: pend.discarderSeat });
 
-    // 鳴きが入るとリーチ中の一発は消える、他家一発も消える
     for (const pl of this.players) pl.ippatsuActive = false;
 
     this.currentTurnSeat = winnerSeat;
     this.turnDrawnTile = null;
     this.broadcastState();
     this.checkOwnTsumoPossible(winnerSeat);
-    // 鳴いた人はツモらず、即打牌フェーズ(クライアントからdiscardメッセージを待つ)
   }
 
   advanceTurnAfterDiscard(discarderSeat: number) {
     const n = this.rules.playerCount;
-    // 四家立直チェック(全員リーチしたら流局)
     if (this.players.every((p) => p.riichi)) {
       this.exhaustiveDraw('four-riichi');
       return;
@@ -515,7 +547,7 @@ export class GameRoom {
     const p = this.players[seat];
     const chars = this.handCharsForWinCheck(p);
     const decomps = findAllDecompositions(chars, this.wordDict, 50);
-    if (decomps.length === 0) return; // 不正な和了宣言
+    if (decomps.length === 0) return;
     this.finishHandByTsumo(seat, decomps);
   }
 
@@ -558,7 +590,6 @@ export class GameRoom {
   }
 
   finishHandByRon(discarderSeat: number, tile: Tile, ronSeats: number[]) {
-    // ダブロン・トリロン対応: 全員に対して個別に精算する
     const results: any[] = [];
     let dealerWon = false;
     for (const seat of ronSeats) {
@@ -578,7 +609,6 @@ export class GameRoom {
   }
 
   exhaustiveDraw(reason: string) {
-    // 簡易実装: テンパイ/ノーテン判定は省略し、親のみ連荘扱いとする拡張余地あり
     this.broadcastRaw({ type: 'result', kind: 'draw', reason });
     this.endHandAndAdvance(true);
   }
@@ -598,17 +628,15 @@ export class GameRoom {
     for (const p of this.players) p.ready = false;
     this.phase = 'waiting';
     this.broadcastState();
-    // 実運用では次局開始も全員準備OKで開始する想定。ここでは自動継続する。
     this.startHand(false);
   }
 
   isMatchOver(): boolean {
-    const roundsPerWind = 1; // 東/南 それぞれ何局か(1局固定の簡易実装。必要に応じ拡張)
     switch (this.rules.length) {
       case 'ichikyoku': return this.round > 1;
-      case 'tonpuu': return this.round > 4;   // 東1〜東4
-      case 'hanchan': return this.round > 8;  // 東1〜南4 相当(簡易)
-      case 'honchan': return this.round > 16; // 東南西北 相当(簡易)
+      case 'tonpuu': return this.round > 4;
+      case 'hanchan': return this.round > 8;
+      case 'honchan': return this.round > 16;
       default: return this.round > 4;
     }
   }
