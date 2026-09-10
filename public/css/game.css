@@ -70,8 +70,14 @@ html, body { height: 100%; overflow: hidden; }
 /* 自分の手牌は左揃え。ただし14枚の手牌全体の中心を画面中央(x=0)に合わせる */
 .seat.bottom {
   bottom: 3%;
-  left: 50%;
-  transform: translateX(-50%);
+  left: calc(
+    50% -
+    (
+      14 * var(--tile-w) +
+      13 * var(--tile-gap)
+    ) / 2
+  );
+  transform: none;
   align-items: flex-start;
 }
 
@@ -106,7 +112,6 @@ html, body { height: 100%; overflow: hidden; }
 .tile.drawn-tile { margin-left: 14px; }
 
 /* 川は手牌より下 */
- /* 川は手牌より下 */
 .river {
   position: absolute;
   display: flex;

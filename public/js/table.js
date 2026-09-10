@@ -181,7 +181,7 @@ function render(s) {
     }
 
     if (seatEl) seatEl.style.display = 'flex';
-    if (riverEl) riverEl.style.display = 'grid';
+    if (riverEl) riverEl.style.display = 'flex';
     if (compassEl) compassEl.style.display = 'flex';
     if (tagEl) tagEl.style.display = 'flex';
 
