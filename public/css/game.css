@@ -67,19 +67,14 @@ html, body { height: 100%; overflow: hidden; }
   z-index: 5;
 }
 
-/* 自分の手牌は左揃え。ただし14枚の手牌全体の中心を画面中央(x=0)に合わせる */
+/* 自分の手牌は、実際に表示される14枚全体の中心を画面中央に合わせる */
 .seat.bottom {
   bottom: 3%;
-  left: calc(
-    50% -
-    (
-      14 * var(--tile-w) +
-      13 * var(--tile-gap)
-    ) / 2
-  );
-  transform: none;
+  left: 50%;
+  transform: translateX(-50%);
   align-items: flex-start;
 }
+
 
 .seat.right {
   right: 1.5%;
@@ -106,6 +101,7 @@ html, body { height: 100%; overflow: hidden; }
   position: relative;
   z-index: 5;
 }
+
 .meld-row { display: flex; gap: 4px; margin-bottom: 4px; }
 .tile.dragging { opacity: .35; }
 .tile.drop-target { box-shadow: 0 0 0 2px var(--gold-bright); }
@@ -114,26 +110,26 @@ html, body { height: 100%; overflow: hidden; }
 /* 川は手牌より下 */
 .river {
   position: absolute;
-  display: flex;
-  flex-direction: row;
-  flex-wrap: nowrap;
-  gap: 0;
+  display: block;
+  width: calc(
+    6 * var(--tile-w) +
+    5 * var(--tile-gap)
+  );
+  height: calc(
+    5 * var(--river-tile-h)
+  );
   z-index: 3;
   pointer-events: none;
 }
 
 .river-block {
+  position: absolute;
+  top: 0;
   display: grid;
   grid-template-columns: repeat(6, var(--tile-w));
   grid-template-rows: repeat(5, var(--river-tile-h));
-
   column-gap: var(--tile-gap);
   row-gap: 0;
-
-  flex: 0 0 calc(
-    6 * var(--tile-w) +
-    5 * var(--tile-gap)
-  );
 
   width: calc(
     6 * var(--tile-w) +
@@ -168,7 +164,7 @@ html, body { height: 100%; overflow: hidden; }
 .river.river-top {
   top: calc(50% - var(--compass-size) / 2);
   left: 50%;
-  transform: translate(-50%, -100%) rotate(180deg);
+  transform: translateX(-50%) rotate(180deg);
   margin-bottom: 4px;
 }
 

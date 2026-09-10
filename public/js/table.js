@@ -879,11 +879,18 @@ function digitHtml(ch) {
 function renderRiverTiles(discards) {
   const blocks = [];
 
+  const blockWidth =
+    'calc(6 * (var(--tile-w) + var(--tile-gap)))';
+
   for (let i = 0; i < discards.length; i += 30) {
     const block = discards.slice(i, i + 30);
+    const blockIndex = i / 30;
 
     blocks.push(`
-      <div class="river-block">
+      <div
+        class="river-block"
+        style="left: calc(${blockIndex} * ${blockWidth});"
+      >
         ${block
           .map((k) =>
             tileHtml(
