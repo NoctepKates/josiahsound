@@ -73,8 +73,9 @@ html, body { height: 100%; overflow: hidden; }
   left: calc(
     50% -
     (
-      14 * var(--tile-w) +
-      13 * var(--tile-gap)
+      14 * 42px +
+      13 * var(--tile-gap) +
+      14px
     ) / 2
   );
   transform: none;
