@@ -1,6 +1,8 @@
 // 単語辞書を使った手牌分解ロジック
 // 「手牌14枚(ひらがな14文字)が、登録された単語だけで過不足なく構成される」かどうかを判定する
 
+import { ALL_TILE_KINDS } from './tiles';
+
 export interface WordDef {
   word: string;   // 例: "ありがとう"
   han: number;    // この単語が確定したときの飜数
@@ -113,4 +115,34 @@ export function findCallCandidates(
     }
   }
   return candidates;
+}
+
+/**
+ * 手牌13枚がテンパイ(あと1枚の特定の牌が来れば和了できる状態)かどうかを判定する。
+ * 全77種類の牌を1枚ずつ試しに加えてみて、どれかで和了形になれば true。
+ */
+export function isTenpai(hand13: string[], dict: WordDef[]): boolean {
+  if (hand13.length !== 13) return false;
+  for (const kind of ALL_TILE_KINDS) {
+    if (canWin([...hand13, kind], dict)) return true;
+  }
+  return false;
+}
+
+/**
+ * 手牌14枚(打牌前)の中から、どれか1枚を切ればテンパイになる組み合わせが
+ * 存在するかどうかを判定する。リーチ宣言が可能かどうかの判定に使う。
+ */
+export function canDeclareRiichiHand(hand14: string[], dict: WordDef[]): boolean {
+  if (hand14.length !== 14) return false;
+  const triedKinds = new Set<string>();
+  for (let i = 0; i < hand14.length; i++) {
+    const kind = hand14[i];
+    if (triedKinds.has(kind)) continue; // 同じ牌を重複して試す必要はない
+    triedKinds.add(kind);
+    const rest = [...hand14];
+    rest.splice(i, 1);
+    if (isTenpai(rest, dict)) return true;
+  }
+  return false;
 }

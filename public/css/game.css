@@ -84,8 +84,23 @@ html, body { height: 100%; overflow: hidden; }
 }
 .river.river-bottom { top: calc(50% + var(--compass-size) / 2); left: 50%; transform: translateX(-50%); margin-top: 4px; }
 .river.river-top { top: calc(50% - var(--compass-size) / 2); left: 50%; transform: translate(-50%, -100%) rotate(180deg); margin-bottom: 4px; }
-.river.river-right { left: calc(50% + var(--compass-size) / 2); top: 50%; transform: translateY(-50%) rotate(-90deg); transform-origin: left center; margin-left: 4px; }
-.river.river-left { right: calc(50% + var(--compass-size) / 2); top: 50%; transform: translateY(-50%) rotate(90deg); transform-origin: right center; margin-right: 4px; }
+/* 右/左の川: 行数(discard数)が増えても基準点がズレないよう、回転の軸を常に
+   コンパス側の固定コーナー(0 0)にする。以前は「自分の高さの50%」を軸にしていたため、
+   行数が増えるたびに軸そのものが動いてしまい、両方向に伸びる/初期位置がズレる原因になっていた。 */
+.river.river-right {
+  left: calc(50% + var(--compass-size) / 2);
+  top: calc(50% + var(--compass-size) / 2);
+  transform-origin: 0 0;
+  transform: rotate(-90deg);
+  margin-left: 4px;
+}
+.river.river-left {
+  left: calc(50% - var(--compass-size) / 2);
+  top: calc(50% - var(--compass-size) / 2);
+  transform-origin: 0 0;
+  transform: rotate(90deg);
+  margin-right: 4px;
+}
 
 /* ---------- ユーザー名タグ(画面四隅・回転の影響を受けない) ---------- */
 .player-tag {

@@ -290,18 +290,9 @@ function renderHandOnly() {
   attachHandHandlers(handEl);
 }
 
-// リーチ可能かどうかの簡易判定(門前・未リーチ・点数1000以上・残り牌4枚以上)
-// ※ 本来はその牌を切った後に手牌がテンパイするかまで判定すべきだが、
-//   クライアント側では簡略化した条件のみでボタンの表示可否を決めている。
+// リーチ可能かどうかはサーバー側で実際にテンパイ判定した結果(state.canRiichi)をそのまま使う。
 function canDeclareRiichi() {
-  if (!state || state.yourSeat === -1) return false;
-  const me = state.players[state.yourSeat];
-  if (!me) return false;
-  if (me.riichi) return false;
-  if (me.melds.length > 0) return false;
-  if (me.score < 1000) return false;
-  if (state.wallRemaining < 4) return false;
-  return true;
+  return !!(state && state.canRiichi);
 }
 
 function renderActionBar() {

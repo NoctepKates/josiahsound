@@ -1,5 +1,5 @@
 import { Tile, buildWall, rollDice2, nextForDora } from './mahjong/tiles';
-import { WordDef, canWin, findAllDecompositions, findCallCandidates, CallCandidate } from './mahjong/words';
+import { WordDef, canWin, findAllDecompositions, findCallCandidates, CallCandidate, canDeclareRiichiHand } from './mahjong/words';
 import { computeScore } from './mahjong/score';
 
 export interface RoomRules {
@@ -252,6 +252,20 @@ export class GameRoom {
     };
   }
 
+  // リーチ宣言が可能かどうか(門前・未リーチ・持ち点1000以上・残り牌4枚以上・
+  // かつ実際にどれか1枚切ればテンパイになる)を判定する。
+  computeCanRiichi(seat: number): boolean {
+    const p = this.players[seat];
+    if (!p) return false;
+    if (p.riichi) return false;
+    if (p.melds.length > 0) return false;
+    if (p.score < 1000) return false;
+    if (this.wall.length < 4) return false;
+    const hand14 = p.hand.map((t) => t.kind);
+    if (hand14.length !== 14) return false;
+    return canDeclareRiichiHand(hand14, this.wordDict);
+  }
+
   broadcastState() {
     const base = {
       type: 'state',
@@ -283,6 +297,7 @@ export class GameRoom {
         ? this.currentTurnSeat
         : seats[0];
       const me = this.players[viewSeat];
+      const isMyTurnNow = this.phase === 'playing' && this.currentTurnSeat === viewSeat;
       ws.send(JSON.stringify({
         ...base,
         yourSeat: viewSeat,
@@ -292,6 +307,8 @@ export class GameRoom {
         devAllHands: isDev ? this.players.map((p) => ({ seat: p.seat, hand: p.hand.map((t) => t.kind).sort() })) : undefined,
         yourHand: me ? me.hand.map((t) => t.kind).sort() : [],
         yourDrawnTile: (this.currentTurnSeat === viewSeat && this.turnDrawnTile) ? this.turnDrawnTile.kind : null,
+        // 実際にテンパイになる場合のみtrue(サーバー側で判定した正式な値)
+        canRiichi: isMyTurnNow ? this.computeCanRiichi(viewSeat) : false,
       }));
     }
     for (const ws of this.spectatorSockets) {
