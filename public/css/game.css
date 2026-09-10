@@ -70,15 +70,20 @@ html, body { height: 100%; overflow: hidden; }
 /* 自分の手牌は、実際に表示される14枚全体の中心を画面中央に合わせる */
 .seat.bottom {
   bottom: 3%;
-  left: 0;
-  width: 100%;
+  left: calc(
+    50% -
+    (
+      14 * var(--tile-w) +
+      13 * var(--tile-gap)
+    ) / 2
+  );
   transform: none;
   align-items: flex-start;
 }
 
 .seat.bottom .hand-row {
-  margin-left: 50%;
-  transform: translateX(-50%);
+  margin-left: 0;
+  transform: none;
 }
 
 .seat.right {
