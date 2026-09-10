@@ -108,32 +108,66 @@ html, body { height: 100%; overflow: hidden; }
 /* 川は手牌より下 */
 .river {
   position: absolute;
-  display: flex;
-  flex-direction: row;
-  flex-wrap: wrap;
-  align-content: flex-start;
-  width: calc(6 * var(--tile-w) + 5 * var(--tile-gap));
-  height: calc(5 * var(--river-tile-h));
-  gap: 0 var(--tile-gap);
+  display: grid;
+
+  /*
+   * 横6枚 × 縦5段
+   *
+   *  1  2  3  4  5  6
+   *  7  8  9 10 11 12
+   * 13 14 15 16 17 18
+   * 19 20 21 22 23 24
+   * 25 26 27 28 29 30
+   *
+   * 31枚目からは、この30枚のブロックを
+   * 右へ6枚分ずらして同じ形で配置する。
+   */
+  grid-template-columns: repeat(6, var(--tile-w));
+  grid-template-rows: repeat(5, var(--river-tile-h));
+
+  width: calc(
+    6 * var(--tile-w) +
+    5 * var(--tile-gap)
+  );
+
+  height: calc(
+    5 * var(--river-tile-h)
+  );
+
+  column-gap: var(--tile-gap);
+  row-gap: 0;
+
   z-index: 3;
   pointer-events: none;
 }
 
 .river .tile {
-  flex: 0 0 var(--tile-w);
+  width: var(--tile-w);
   height: var(--river-tile-h);
+  box-sizing: border-box;
 }
 
 /*
- * 1～30枚目を横6枚 × 縦5行で配置。
- * 31枚目以降は次の30枚ブロックとして右へ送る。
+ * 31枚目以降は30枚ごとのブロックとして
+ * 右へ6枚分ずらす。
  *
- * nth-child(30n + 1) は 31, 61, 91... に一致するため、
- * 60枚で打ち止めにはならず、その後も同じ規則が繰り返される。
+ * 31, 61, 91... を新しいブロックの先頭として扱う。
  */
 .river .tile:nth-child(30n + 1):not(:first-child) {
-  margin-left: calc(6 * (var(--tile-w) + var(--tile-gap)));
-  margin-top: calc(-5 * var(--river-tile-h));
+  transform: translate(
+    calc(6 * (var(--tile-w) + var(--tile-gap))),
+    calc(-5 * var(--river-tile-h))
+  );
+}
+
+/*
+ * 31枚目以降のブロックに属する牌も、
+ * 先頭の31枚目と同じブロック位置へ追従させる。
+ */
+.river .tile:nth-child(n + 31) {
+  position: relative;
+  left: calc(6 * (var(--tile-w) + var(--tile-gap)));
+  top: calc(-5 * var(--river-tile-h));
 }
 
 .river.river-bottom {
@@ -142,12 +176,14 @@ html, body { height: 100%; overflow: hidden; }
   transform: translateX(-50%);
   margin-top: 4px;
 }
+
 .river.river-top {
   top: calc(50% - var(--compass-size) / 2);
   left: 50%;
   transform: translate(-50%, -100%) rotate(180deg);
   margin-bottom: 4px;
 }
+
 .river.river-right {
   left: calc(50% + var(--compass-size) / 2);
   top: calc(50% + var(--compass-size) / 2);
@@ -155,6 +191,7 @@ html, body { height: 100%; overflow: hidden; }
   transform: rotate(-90deg);
   margin-left: 4px;
 }
+
 .river.river-left {
   left: calc(50% - var(--compass-size) / 2);
   top: calc(50% - var(--compass-size) / 2);
@@ -162,6 +199,7 @@ html, body { height: 100%; overflow: hidden; }
   transform: rotate(90deg);
   margin-right: 4px;
 }
+
 
 .player-tag {
   position: absolute; font-size: 12px; color: var(--text-sub);
