@@ -112,30 +112,20 @@ html, body { height: 100%; overflow: hidden; }
 .river {
   position: absolute;
   display: grid;
-  grid-template-columns: repeat(5, var(--tile-w));
-  grid-template-rows: repeat(3, var(--tile-w));
-  grid-auto-flow: column;
+  grid-template-columns: repeat(6, var(--tile-w));
+  grid-template-rows: repeat(5, var(--tile-w));
   gap: var(--tile-gap);
   z-index: 3;
   pointer-events: none;
 }
 
 /*
- * 川は1～5列目を通常配置。
- * 6列目はYを1列目に戻したうえで、6枚分右へ移動。
- * 16～18枚目が「6列目」の3枚になる。
- * 31～33枚目以降も同じ規則。
+ * 河は30枚ごとに次のブロックへ移る。
+ * 1ブロックは横6列 × 縦5行。
+ * 31枚目以降はYを先頭に戻し、6列分右へ移動する。
  */
-.river .tile:nth-child(15n + 16),
-.river .tile:nth-child(15n + 17),
-.river .tile:nth-child(15n + 18) {
-  margin-left: calc(6 * (var(--tile-w) + var(--tile-gap)));
-}
-
-.river .tile:nth-child(15n + 31),
-.river .tile:nth-child(15n + 32),
-.river .tile:nth-child(15n + 33) {
-  margin-left: calc(12 * (var(--tile-w) + var(--tile-gap)));
+.river .tile:nth-child(n + 31) {
+  transform: translateX(calc(6 * (var(--tile-w) + var(--tile-gap))));
 }
 
 .river.river-bottom {
