@@ -2,6 +2,7 @@
   --tile-w: 30px;
   --tile-gap: 3px;
   --compass-size: 195px;
+  --river-tile-h: 42px;
 }
 
 html, body { height: 100%; overflow: hidden; }
@@ -66,18 +67,14 @@ html, body { height: 100%; overflow: hidden; }
   z-index: 5;
 }
 
-/* 自分の手牌は左揃え */
+/* 自分の手牌は画面左から左揃え */
 .seat.bottom {
   bottom: 3%;
-  left: 50%;
-  transform: translateX(-50%);
+  left: 3%;
+  transform: none;
   align-items: flex-start;
 }
 
-/*
- * 左右の手牌は回転中心を「手牌自身の中央」にする。
- * これにより、回転後に左下/右下へずれる問題を防ぐ。
- */
 .seat.right {
   right: 1.5%;
   top: 50%;
@@ -112,18 +109,18 @@ html, body { height: 100%; overflow: hidden; }
 .river {
   position: absolute;
   display: grid;
-  grid-template-columns: repeat(6, var(--tile-w));
-  grid-template-rows: repeat(5, var(--tile-w));
-  gap: var(--tile-gap);
+  /* 1～30枚目：縦5列 × 各列6枚 */
+  grid-template-columns: repeat(5, var(--tile-w));
+  grid-template-rows: repeat(6, var(--river-tile-h));
+  grid-auto-flow: column;
+  /* 上下の牌の上端間隔を、牌1枚分(42px)にする */
+  column-gap: var(--tile-gap);
+  row-gap: 0;
   z-index: 3;
   pointer-events: none;
 }
 
-/*
- * 河は30枚ごとに次のブロックへ移る。
- * 1ブロックは横6列 × 縦5行。
- * 31枚目以降はYを先頭に戻し、6列分右へ移動する。
- */
+/* 31枚目以降はYを1列目へ戻し、6枚分右へ */
 .river .tile:nth-child(n + 31) {
   transform: translateX(calc(6 * (var(--tile-w) + var(--tile-gap))));
 }
