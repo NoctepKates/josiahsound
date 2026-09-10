@@ -1,7 +1,7 @@
 :root {
   --tile-w: 30px;
   --tile-gap: 3px;
-  --compass-size: 195px; /* 牌6枚分(30px)+隙間5個分(3px) = 195px の正方形 */
+  --compass-size: 195px;
 }
 
 html, body { height: 100%; overflow: hidden; }
@@ -14,7 +14,6 @@ html, body { height: 100%; overflow: hidden; }
   box-shadow: inset 0 0 60px rgba(0,0,0,.6), 0 10px 40px rgba(0,0,0,.6);
 }
 
-/* ---------- 中央コンパス(正方形・3x3グリッド) ---------- */
 .compass {
   position: absolute; top: 50%; left: 50%;
   width: var(--compass-size); height: var(--compass-size);
@@ -26,8 +25,6 @@ html, body { height: 100%; overflow: hidden; }
   border: 1px solid rgba(217,180,106,.35);
   border-radius: 8px;
 }
-/* グリッドの自動配置(DOM順)に頼らず、各セルの位置を明示的に固定する。
-   こうすることで、非表示(display:none)になるセルがあっても他のセルの位置がズレない。 */
 .cell-center { grid-column: 2; grid-row: 2; }
 .cell-top { grid-column: 2; grid-row: 1; }
 .cell-right { grid-column: 3; grid-row: 2; }
@@ -45,7 +42,6 @@ html, body { height: 100%; overflow: hidden; }
 .riichi-stick.active { opacity: 1; }
 .cell-center { background: #050a08; border-radius: 6px; margin: 4px; box-shadow: inset 0 0 10px rgba(0,0,0,.9); }
 
-/* ---------- 七セグ風デジタル数字(山の残り枚数) ---------- */
 .digit-group { display: flex; gap: 3px; }
 .digit { position: relative; width: 13px; height: 22px; }
 .seg { position: absolute; background: #3a1010; border-radius: 1px; }
@@ -60,33 +56,100 @@ html, body { height: 100%; overflow: hidden; }
 .seg-e { bottom: 1px; left: 0; }
 .seg-c { bottom: 1px; right: 0; }
 
-/* ---------- 座席(手牌・鳴きのみ。ユーザー名は別要素) ---------- */
+/* 手牌は川より上のレイヤー */
 .seat {
-  position: absolute; display: flex; flex-direction: column; align-items: center; gap: 4px;
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  z-index: 5;
 }
-.seat.bottom { bottom: 3%; left: 50%; transform: translateX(-50%); }
-.seat.right { right: 1.5%; top: 50%; transform: translateY(-50%) rotate(-90deg); transform-origin: right center; }
-.seat.top { top: 3%; left: 50%; transform: translateX(-50%) rotate(180deg); }
-.seat.left { left: 1.5%; top: 50%; transform: translateY(-50%) rotate(90deg); transform-origin: left center; }
 
-.hand-row { display: flex; gap: var(--tile-gap); min-height: 58px; }
+/* 自分の手牌は左揃え */
+.seat.bottom {
+  bottom: 3%;
+  left: 50%;
+  transform: translateX(-50%);
+  align-items: flex-start;
+}
+
+/*
+ * 左右の手牌は回転中心を「手牌自身の中央」にする。
+ * これにより、回転後に左下/右下へずれる問題を防ぐ。
+ */
+.seat.right {
+  right: 1.5%;
+  top: 50%;
+  transform: translate(50%, -50%) rotate(-90deg);
+  transform-origin: center center;
+}
+.seat.top {
+  top: 3%;
+  left: 50%;
+  transform: translateX(-50%) rotate(180deg);
+}
+.seat.left {
+  left: 1.5%;
+  top: 50%;
+  transform: translate(-50%, -50%) rotate(90deg);
+  transform-origin: center center;
+}
+
+.hand-row {
+  display: flex;
+  gap: var(--tile-gap);
+  min-height: 58px;
+  position: relative;
+  z-index: 5;
+}
 .meld-row { display: flex; gap: 4px; margin-bottom: 4px; }
-
 .tile.dragging { opacity: .35; }
 .tile.drop-target { box-shadow: 0 0 0 2px var(--gold-bright); }
 .tile.drawn-tile { margin-left: 14px; }
 
-/* ---------- 川(捨て牌): コンパスの各辺にぴったり密着 ---------- */
+/* 川は手牌より下 */
 .river {
-  position: absolute; display: grid;
-  grid-template-columns: repeat(6, var(--tile-w)); gap: var(--tile-gap);
-  z-index: 4;
+  position: absolute;
+  display: grid;
+  grid-template-columns: repeat(5, var(--tile-w));
+  grid-template-rows: repeat(3, var(--tile-w));
+  grid-auto-flow: column;
+  gap: var(--tile-gap);
+  z-index: 3;
+  pointer-events: none;
 }
-.river.river-bottom { top: calc(50% + var(--compass-size) / 2); left: 50%; transform: translateX(-50%); margin-top: 4px; }
-.river.river-top { top: calc(50% - var(--compass-size) / 2); left: 50%; transform: translate(-50%, -100%) rotate(180deg); margin-bottom: 4px; }
-/* 右/左の川: 行数(discard数)が増えても基準点がズレないよう、回転の軸を常に
-   コンパス側の固定コーナー(0 0)にする。以前は「自分の高さの50%」を軸にしていたため、
-   行数が増えるたびに軸そのものが動いてしまい、両方向に伸びる/初期位置がズレる原因になっていた。 */
+
+/*
+ * 川は1～5列目を通常配置。
+ * 6列目はYを1列目に戻したうえで、6枚分右へ移動。
+ * 16～18枚目が「6列目」の3枚になる。
+ * 31～33枚目以降も同じ規則。
+ */
+.river .tile:nth-child(15n + 16),
+.river .tile:nth-child(15n + 17),
+.river .tile:nth-child(15n + 18) {
+  margin-left: calc(6 * (var(--tile-w) + var(--tile-gap)));
+}
+
+.river .tile:nth-child(15n + 31),
+.river .tile:nth-child(15n + 32),
+.river .tile:nth-child(15n + 33) {
+  margin-left: calc(12 * (var(--tile-w) + var(--tile-gap)));
+}
+
+.river.river-bottom {
+  top: calc(50% + var(--compass-size) / 2);
+  left: 50%;
+  transform: translateX(-50%);
+  margin-top: 4px;
+}
+.river.river-top {
+  top: calc(50% - var(--compass-size) / 2);
+  left: 50%;
+  transform: translate(-50%, -100%) rotate(180deg);
+  margin-bottom: 4px;
+}
 .river.river-right {
   left: calc(50% + var(--compass-size) / 2);
   top: calc(50% + var(--compass-size) / 2);
@@ -102,7 +165,6 @@ html, body { height: 100%; overflow: hidden; }
   margin-right: 4px;
 }
 
-/* ---------- ユーザー名タグ(画面四隅・回転の影響を受けない) ---------- */
 .player-tag {
   position: absolute; font-size: 12px; color: var(--text-sub);
   background: rgba(0,0,0,.45); padding: 4px 10px; border-radius: 8px;
@@ -132,7 +194,6 @@ html, body { height: 100%; overflow: hidden; }
   background: var(--bg-panel-2); border: 1px solid var(--gold); padding: 4px 10px; border-radius: 14px; font-size: 13px;
 }
 
-/* ---------- 開発者モード ---------- */
 .dev-bar {
   display: flex; align-items: center; gap: 10px; font-size: 12px; color: var(--text-sub);
   background: rgba(217,180,106,.08); border: 1px solid rgba(217,180,106,.4);
