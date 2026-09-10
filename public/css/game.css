@@ -1,30 +1,24 @@
 :root {
   --tile-w: 30px;
   --tile-gap: 3px;
-  --compass-size: 195px;
+  --compass-size: 195px; /* 牌6枚分(30px)+隙間5個分(3px) = 195px の正方形 */
 }
 
 html, body { height: 100%; overflow: hidden; }
 
 .table-wrap {
-  position: relative;
-  width: min(88vw, 88vh, 820px);
-  height: min(88vw, 88vh, 820px);
-  margin: 8px auto 12px;
-  border-radius: 24px;
+  position: relative; width: min(88vw, 88vh, 820px); height: min(88vw, 88vh, 820px);
+  margin: 8px auto 12px; border-radius: 24px;
   background: radial-gradient(ellipse at center, var(--table-green) 0%, #072019 100%);
   border: 10px solid #3b2a17;
   box-shadow: inset 0 0 60px rgba(0,0,0,.6), 0 10px 40px rgba(0,0,0,.6);
 }
 
+/* ---------- 中央コンパス(正方形・3x3グリッド) ---------- */
 .compass {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: var(--compass-size);
-  height: var(--compass-size);
-  transform: translate(-50%, -50%);
-  z-index: 6;
+  position: absolute; top: 50%; left: 50%;
+  width: var(--compass-size); height: var(--compass-size);
+  transform: translate(-50%, -50%); z-index: 6;
   display: grid;
   grid-template-columns: 1fr 1.6fr 1fr;
   grid-template-rows: 1fr 1.6fr 1fr;
@@ -32,283 +26,105 @@ html, body { height: 100%; overflow: hidden; }
   border: 1px solid rgba(217,180,106,.35);
   border-radius: 8px;
 }
-
+/* グリッドの自動配置(DOM順)に頼らず、各セルの位置を明示的に固定する。
+   こうすることで、非表示(display:none)になるセルがあっても他のセルの位置がズレない。 */
 .cell-center { grid-column: 2; grid-row: 2; }
 .cell-top { grid-column: 2; grid-row: 1; }
 .cell-right { grid-column: 3; grid-row: 2; }
 .cell-bottom { grid-column: 2; grid-row: 3; }
 .cell-left { grid-column: 1; grid-row: 2; }
-
-.compass-cell {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-}
-
-.compass-cell .wind {
-  font-size: 20px;
-  font-weight: 900;
-  color: var(--gold-bright);
-  line-height: 1;
-}
-
-.compass-cell .score {
-  font-size: 11px;
-  color: var(--text-sub);
-  margin-top: 2px;
-}
-
+.compass-cell { display: flex; flex-direction: column; align-items: center; justify-content: center; }
+.compass-cell .wind { font-size: 20px; font-weight: 900; color: var(--gold-bright); line-height: 1; }
+.compass-cell .score { font-size: 11px; color: var(--text-sub); margin-top: 2px; }
 .compass-cell.dealer .wind { color: var(--red-accent); }
-
 .riichi-stick {
-  margin-top: 5px;
-  width: 28px;
-  height: 4px;
-  border-radius: 2px;
-  background: var(--red-accent);
-  box-shadow: 0 0 6px var(--red-accent);
-  opacity: 0;
-  transition: opacity .15s;
+  margin-top: 5px; width: 28px; height: 4px; border-radius: 2px;
+  background: var(--red-accent); box-shadow: 0 0 6px var(--red-accent);
+  opacity: 0; transition: opacity .15s;
 }
-
 .riichi-stick.active { opacity: 1; }
+.cell-center { background: #050a08; border-radius: 6px; margin: 4px; box-shadow: inset 0 0 10px rgba(0,0,0,.9); }
 
-.cell-center {
-  background: #050a08;
-  border-radius: 6px;
-  margin: 4px;
-  box-shadow: inset 0 0 10px rgba(0,0,0,.9);
-  gap: 3px;
-}
-
-.wall-label {
-  font-size: 10px;
-  line-height: 1;
-  color: var(--text-sub);
-  letter-spacing: .08em;
-}
-
-.digit-group {
-  display: flex;
-  gap: 3px;
-  align-items: center;
-  justify-content: center;
-}
-
-.digit {
-  position: relative;
-  width: 13px;
-  height: 22px;
-  flex: 0 0 13px;
-}
-
-.seg {
-  position: absolute;
-  background: #3a1010;
-  border-radius: 1px;
-}
-
-.seg.on {
-  background: #ff4b3e;
-  box-shadow: 0 0 5px #ff4b3e, 0 0 10px rgba(255,75,62,.6);
-}
-
-.seg-a, .seg-d, .seg-g {
-  width: 9px;
-  height: 2px;
-  left: 2px;
-}
-
+/* ---------- 七セグ風デジタル数字(山の残り枚数) ---------- */
+.digit-group { display: flex; gap: 3px; }
+.digit { position: relative; width: 13px; height: 22px; }
+.seg { position: absolute; background: #3a1010; border-radius: 1px; }
+.seg.on { background: #ff4b3e; box-shadow: 0 0 5px #ff4b3e, 0 0 10px rgba(255,75,62,.6); }
+.seg-a, .seg-d, .seg-g { width: 9px; height: 2px; left: 2px; }
 .seg-a { top: 0; }
 .seg-g { top: 10px; }
 .seg-d { bottom: 0; }
-
-.seg-b, .seg-c, .seg-e, .seg-f {
-  width: 2px;
-  height: 9px;
-}
-
+.seg-b, .seg-c, .seg-e, .seg-f { width: 2px; height: 9px; }
 .seg-f { top: 1px; left: 0; }
 .seg-b { top: 1px; right: 0; }
 .seg-e { bottom: 1px; left: 0; }
 .seg-c { bottom: 1px; right: 0; }
 
-/*
- * 座席はすべて同じ固定幅にし、中央を基準に配置する。
- * 回転後も手牌の端がテーブル中心から大きくずれないようにする。
- * 自分の手牌は左端基準のままなので、13枚/14枚で全体が動かない。
- */
+/* ---------- 座席(手牌・鳴きのみ。ユーザー名は別要素) ---------- */
 .seat {
-  position: absolute;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 4px;
-  z-index: 5;
-  width: 430px;
+  position: absolute; display: flex; flex-direction: column; align-items: center; gap: 4px;
 }
+.seat.bottom { bottom: 3%; left: 50%; transform: translateX(-50%); }
+.seat.right { right: 1.5%; top: 50%; transform: translateY(-50%) rotate(-90deg); transform-origin: right center; }
+.seat.top { top: 3%; left: 50%; transform: translateX(-50%) rotate(180deg); }
+.seat.left { left: 1.5%; top: 50%; transform: translateY(-50%) rotate(90deg); transform-origin: left center; }
 
-.seat.bottom {
-  bottom: 3%;
-  left: 50%;
-  transform: translateX(-50%);
-}
-
-.seat.right {
-  right: 50%;
-  top: 50%;
-  transform: translate(50%, -50%) rotate(-90deg);
-  transform-origin: center center;
-}
-
-.seat.top {
-  top: 3%;
-  left: 50%;
-  transform: translateX(-50%) rotate(180deg);
-  transform-origin: center center;
-}
-
-.seat.left {
-  left: 50%;
-  top: 50%;
-  transform: translate(-50%, -50%) rotate(90deg);
-  transform-origin: center center;
-}
-
-.hand-row {
-  display: flex;
-  flex-wrap: nowrap;
-  justify-content: flex-start;
-  align-items: flex-end;
-  gap: var(--tile-gap);
-  min-height: 58px;
-  width: max-content;
-}
-
-.meld-row {
-  display: flex;
-  flex-wrap: nowrap;
-  gap: 4px;
-  margin-bottom: 4px;
-  width: max-content;
-}
+.hand-row { display: flex; gap: var(--tile-gap); min-height: 58px; }
+.meld-row { display: flex; gap: 4px; margin-bottom: 4px; }
 
 .tile.dragging { opacity: .35; }
 .tile.drop-target { box-shadow: 0 0 0 2px var(--gold-bright); }
-
 .tile.drawn-tile { margin-left: 14px; }
 
-/*
- * 川はコンパスの各辺を基準にして中央揃え。
- * 手牌より後ろに置くので、長くなった川が手牌のクリックを邪魔しない。
- */
+/* ---------- 川(捨て牌): コンパスの各辺にぴったり密着 ---------- */
 .river {
-  position: absolute;
-  display: grid;
-  grid-template-columns: repeat(6, var(--tile-w));
-  gap: var(--tile-gap);
+  position: absolute; display: grid;
+  grid-template-columns: repeat(6, var(--tile-w)); gap: var(--tile-gap);
   z-index: 4;
-  pointer-events: none;
 }
+.river.river-bottom { top: calc(50% + var(--compass-size) / 2); left: 50%; transform: translateX(-50%); margin-top: 4px; }
+.river.river-top { top: calc(50% - var(--compass-size) / 2); left: 50%; transform: translate(-50%, -100%) rotate(180deg); margin-bottom: 4px; }
+.river.river-right { left: calc(50% + var(--compass-size) / 2); top: 50%; transform: translateY(-50%) rotate(-90deg); transform-origin: left center; margin-left: 4px; }
+.river.river-left { right: calc(50% + var(--compass-size) / 2); top: 50%; transform: translateY(-50%) rotate(90deg); transform-origin: right center; margin-right: 4px; }
 
-.river.river-bottom {
-  top: calc(50% + var(--compass-size) / 2 + 4px);
-  left: 50%;
-  transform: translateX(-50%);
-}
-
-.river.river-top {
-  top: calc(50% - var(--compass-size) / 2 - 4px);
-  left: 50%;
-  transform: translate(-50%, -100%) rotate(180deg);
-}
-
-.river.river-right {
-  left: calc(50% + var(--compass-size) / 2 + 4px);
-  top: 50%;
-  transform: translateY(-50%) rotate(-90deg);
-  transform-origin: left center;
-}
-
-.river.river-left {
-  right: calc(50% + var(--compass-size) / 2 + 4px);
-  top: 50%;
-  transform: translateY(-50%) rotate(90deg);
-  transform-origin: right center;
-}
-
+/* ---------- ユーザー名タグ(画面四隅・回転の影響を受けない) ---------- */
 .player-tag {
-  position: absolute;
-  font-size: 12px;
-  color: var(--text-sub);
-  background: rgba(0,0,0,.45);
-  padding: 4px 10px;
-  border-radius: 8px;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  z-index: 7;
+  position: absolute; font-size: 12px; color: var(--text-sub);
+  background: rgba(0,0,0,.45); padding: 4px 10px; border-radius: 8px;
+  display: flex; align-items: center; gap: 6px; z-index: 7;
 }
-
-.player-tag.riichi {
-  color: var(--red-accent);
-  border: 1px solid var(--red-accent);
-}
-
-.player-tag .dealer-mark {
-  color: var(--gold-bright);
-  font-weight: 800;
-}
-
+.player-tag.riichi { color: var(--red-accent); border: 1px solid var(--red-accent); }
+.player-tag .dealer-mark { color: var(--gold-bright); font-weight: 800; }
 .corner-self { bottom: 8px; left: 8px; }
 .corner-r1 { top: 8px; left: 8px; }
 .corner-r2 { top: 8px; right: 8px; }
 .corner-r3 { bottom: 8px; right: 8px; }
 
 .action-bar {
-  display: flex;
-  gap: 10px;
-  justify-content: center;
-  margin: 2px 0 8px;
-  min-height: 40px;
+  display: flex; gap: 10px; justify-content: center; margin: 2px 0 8px; min-height: 40px;
 }
 
 .result-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0,0,0,.75);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 60;
+  position: fixed; inset: 0; background: rgba(0,0,0,.75);
+  display: flex; align-items: center; justify-content: center; z-index: 60;
 }
-
 .result-card {
-  width: min(480px, 90vw);
-  padding: 28px;
-  text-align: center;
+  width: min(480px, 90vw); padding: 28px; text-align: center;
 }
-
-.result-card .han-fu {
-  font-size: 24px;
-  color: var(--gold-bright);
-  font-weight: 800;
-  margin: 10px 0;
-}
-
-.result-card .word-list {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  justify-content: center;
-  margin: 10px 0;
-}
-
+.result-card .han-fu { font-size: 24px; color: var(--gold-bright); font-weight: 800; margin: 10px 0; }
+.result-card .word-list { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; margin: 10px 0; }
 .result-card .word-chip {
-  background: var(--bg-panel-2);
-  border: 1px solid var(--gold);
-  padding: 4px 10px;
-  border-radius: 14px;
-  font-size: 13px;
+  background: var(--bg-panel-2); border: 1px solid var(--gold); padding: 4px 10px; border-radius: 14px; font-size: 13px;
+}
+
+/* ---------- 開発者モード ---------- */
+.dev-bar {
+  display: flex; align-items: center; gap: 10px; font-size: 12px; color: var(--text-sub);
+  background: rgba(217,180,106,.08); border: 1px solid rgba(217,180,106,.4);
+  padding: 4px 10px; border-radius: 8px;
+}
+.dev-badge { color: var(--gold-bright); font-weight: 800; }
+.dev-bar select {
+  background: var(--bg-panel-2); color: var(--text-main); border: 1px solid var(--border);
+  border-radius: 6px; font-size: 12px; padding: 3px 6px;
 }

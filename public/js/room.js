@@ -55,7 +55,7 @@ function render(state) {
   document.getElementById('playerCountLabel').textContent = `(${state.players.length}/${state.rules.playerCount})`;
   document.getElementById('playerList').innerHTML = state.players.map((p) => `
     <div style="display:flex; justify-content:space-between; align-items:center; padding:8px 12px; background:var(--bg-panel-2); border-radius:8px;">
-      <span>${p.username} ${p.userId === state.hostUserId ? '<span style="color:var(--gold-bright); font-size:12px;">(ホスト)</span>' : ''}</span>
+      <span>${p.username} ${isHostPlayer(p, state) ? '<span style="color:var(--gold-bright); font-size:12px;">(ホスト)</span>' : ''}</span>
       <span style="color:${p.ready ? '#4caf50' : 'var(--text-sub)'};">${p.ready ? '準備OK' : '未準備'}</span>
     </div>
   `).join('');
@@ -63,11 +63,28 @@ function render(state) {
   const readyBtn = document.getElementById('readyBtn');
   const meInfo = state.players[state.yourSeat];
   readyBtn.textContent = meInfo && meInfo.ready ? '準備解除' : '準備OK';
+
+  // 開発者モード: 自分が複数席を持っている場合は一括準備OKボタンを表示
+  const devBtn = document.getElementById('devReadyAllBtn');
+  if (state.devMode && state.devSeats && state.devSeats.length > 1) {
+    devBtn.classList.remove('hidden');
+  } else {
+    devBtn.classList.add('hidden');
+  }
+}
+
+// ホスト自身(開発者モードでは `hostUserId#席番号` という形式になっているため前方一致でも判定)
+function isHostPlayer(p, state) {
+  return p.userId === state.hostUserId || (typeof p.userId === 'string' && p.userId.startsWith(state.hostUserId + '#'));
 }
 
 document.getElementById('readyBtn').onclick = () => {
   const meInfo = latestState && latestState.players[latestState.yourSeat];
-  ws.send(JSON.stringify({ type: 'ready', ready: !(meInfo && meInfo.ready) }));
+  ws.send(JSON.stringify({ type: 'ready', ready: !(meInfo && meInfo.ready), seat: latestState && latestState.yourSeat }));
+};
+
+document.getElementById('devReadyAllBtn').onclick = () => {
+  ws.send(JSON.stringify({ type: 'devReadyAll' }));
 };
 
 document.getElementById('inviteBtn').onclick = async () => {

@@ -10,8 +10,27 @@
 
 <header style="display:flex; align-items:center; justify-content:space-between; padding:8px 24px;">
   <div class="title-logo" style="font-size:18px;">下麻</div>
-  <div id="roundInfo" style="font-size:13px; color:var(--text-sub);"></div>
+  <div style="display:flex; align-items:center; gap:14px;">
+    <div id="devBar" class="dev-bar hidden">
+      <span class="dev-badge">🛠 開発者モード</span>
+      <label style="display:flex; align-items:center; gap:4px;">
+        <input type="checkbox" id="devGodView" checked style="width:auto;" /> 全員の手牌を見る
+      </label>
+      <select id="devSeatSelect"></select>
+      <button class="btn" id="devDebugToggle" style="padding:6px 10px; font-size:12px;">Debug</button>
+    </div>
+    <div id="roundInfo" style="font-size:13px; color:var(--text-sub);"></div>
+  </div>
 </header>
+
+<!-- 開発者モード: デバッグ情報パネル -->
+<div class="modal-overlay hidden" id="debugModal">
+  <div class="panel modal" style="text-align:left; width:min(640px,92vw);">
+    <h3>Debug State</h3>
+    <pre id="debugJson" style="max-height:60vh; overflow:auto; font-size:11px; background:#000; padding:10px; border-radius:6px;"></pre>
+    <button class="btn" onclick="document.getElementById('debugModal').classList.add('hidden')">閉じる</button>
+  </div>
+</div>
 
 <div class="table-wrap" id="table">
 

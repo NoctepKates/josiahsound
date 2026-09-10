@@ -1,4 +1,4 @@
-import { Tile, buildWall, rollDice2, nextForDora, ALL_TILE_KINDS } from './mahjong/tiles';
+import { Tile, buildWall, rollDice2, nextForDora } from './mahjong/tiles';
 import { WordDef, canWin, findAllDecompositions, findCallCandidates, CallCandidate } from './mahjong/words';
 import { computeScore } from './mahjong/score';
 
@@ -23,6 +23,7 @@ interface Player {
   score: number;
   ready: boolean;
   connected: boolean;
+  isDev?: boolean; // 開発者モードで自動的に埋められた席かどうか
 }
 
 type Phase = 'waiting' | 'dealing' | 'playing' | 'finished';
@@ -146,34 +147,82 @@ export class GameRoom {
     await this.state.storage.put('room', snapshot);
   }
 
+  // ホスト席かどうかの判定。開発者モードで自動生成された席は `元のuserId#席番号` という
+  // userIdになっているため、前方一致でも判定する。
+  isHostSeat(seat: number): boolean {
+    const u = this.players[seat]?.userId;
+    if (!u) return false;
+    return u === this.hostUserId || u.startsWith(this.hostUserId + '#');
+  }
+
   handleSocket(ws: WebSocket, userId: string, username: string) {
-    let seat = this.players.findIndex((p) => p.userId === userId);
-    if (seat === -1 && this.phase === 'waiting' && this.players.length < this.rules.playerCount) {
-      seat = this.players.length;
-      this.players.push({
-        seat, userId, username, hand: [], discards: [], melds: [],
-        riichi: false, ippatsuActive: false, score: 25000, ready: false, connected: true,
+    const isAdmin = username === 'administrator'; // 開発者モード判定
+
+    // 既存の自分の席(再接続時)。開発者モードで複数席を持っている場合も
+    // `userId#席番号` の前方一致で全て拾い直す。
+    let mySeats: number[] = this.players
+      .map((_, idx) => idx)
+      .filter((idx) => {
+        const u = this.players[idx].userId;
+        return u === userId || u.startsWith(userId + '#');
       });
+
+    if (mySeats.length === 0 && this.phase === 'waiting') {
+      if (isAdmin) {
+        // 開発者モード: 人数が足りていない残り全ての席を自分として埋める
+        while (this.players.length < this.rules.playerCount) {
+          const seat = this.players.length;
+          this.players.push({
+            seat, userId: `${userId}#${seat}`, username: `${username}(${seat + 1}P)`,
+            hand: [], discards: [], melds: [],
+            riichi: false, ippatsuActive: false, score: 25000, ready: false, connected: true,
+            isDev: true,
+          });
+          mySeats.push(seat);
+        }
+      } else if (this.players.length < this.rules.playerCount) {
+        const seat = this.players.length;
+        this.players.push({
+          seat, userId, username, hand: [], discards: [], melds: [],
+          riichi: false, ippatsuActive: false, score: 25000, ready: false, connected: true,
+        });
+        mySeats.push(seat);
+      }
     }
-    if (seat === -1) {
+
+    if (mySeats.length === 0) {
       this.spectatorSockets.add(ws);
     } else {
-      this.players[seat].connected = true;
-      this.sockets.set(seat, ws);
+      for (const seat of mySeats) {
+        this.players[seat].connected = true;
+        this.sockets.set(seat, ws);
+      }
     }
 
     ws.addEventListener('message', (ev: MessageEvent) => {
       try {
         const msg = JSON.parse(ev.data as string);
-        this.onMessage(seat, msg);
+        // 開発者モード: 自分が持つ全ての席を一括で準備OKにする
+        if (msg.type === 'devReadyAll' && mySeats.length > 1) {
+          for (const s of mySeats) this.players[s].ready = true;
+          this.broadcastState();
+          this.maybeStart();
+          return;
+        }
+        // 複数席を持つ接続(開発者モード)は、メッセージに含まれる`seat`でどの席として
+        // 行動するかを指定する。指定が無い/自分の席でない場合は先頭の席を使う。
+        const actingSeat = (typeof msg.seat === 'number' && mySeats.includes(msg.seat)) ? msg.seat : mySeats[0];
+        this.onMessage(actingSeat, msg);
       } catch (e) {
         // ignore malformed
       }
     });
     ws.addEventListener('close', () => {
-      if (seat >= 0) {
-        this.players[seat].connected = false;
-        this.sockets.delete(seat);
+      if (mySeats.length > 0) {
+        for (const s of mySeats) {
+          this.players[s].connected = false;
+          this.sockets.delete(s);
+        }
       } else {
         this.spectatorSockets.delete(ws);
       }
@@ -189,7 +238,8 @@ export class GameRoom {
   }
   broadcastRaw(payload: any) {
     const json = JSON.stringify(payload);
-    for (const ws of this.sockets.values()) ws.send(json);
+    const uniqueSockets = new Set(this.sockets.values());
+    for (const ws of uniqueSockets) ws.send(json);
     for (const ws of this.spectatorSockets) ws.send(json);
   }
 
@@ -200,34 +250,6 @@ export class GameRoom {
       melds: p.melds.map((m) => ({ word: m.word, tiles: m.tiles.map((t) => t.kind) })),
       riichi: p.riichi, score: p.score, ready: p.ready, connected: p.connected,
     };
-  }
-
-  // リーチ可能な捨て牌をサーバー側で判定する。
-  // 13枚にした後、どの牌を引けば和了できるかを全種類について調べる。
-  isTenpai(chars: string[]): boolean {
-    if (chars.length !== 13) return false;
-    for (const draw of ALL_TILE_KINDS) {
-      if (canWin([...chars, draw], this.wordDict)) return true;
-    }
-    return false;
-  }
-
-  riichiDiscards(seat: number): string[] {
-    const p = this.players[seat];
-    if (!p || p.riichi || p.melds.length > 0 || p.score < 1000) return [];
-    // リーチ宣言は14枚から1枚切るケースのみ。
-    if (p.hand.length !== 14 || this.wall.length < 4) return [];
-
-    const result = new Set<string>();
-    for (const tile of p.hand) {
-      const remaining = p.hand.filter((t) => t.id !== tile.id).map((t) => t.kind);
-      if (this.isTenpai(remaining)) result.add(tile.kind);
-    }
-    return [...result];
-  }
-
-  canDeclareRiichi(seat: number): boolean {
-    return this.riichiDiscards(seat).length > 0;
   }
 
   broadcastState() {
@@ -245,27 +267,42 @@ export class GameRoom {
       wallRemaining: this.wall.length,
       players: this.players.map((p) => this.publicPlayerView(p)),
     };
+
+    // 同じWebSocket接続が複数の席を持つ場合(開発者モード)があるため、
+    // 接続(ws)単位でグループ化してから、1接続につき1通のstateを送る。
+    const wsToSeats = new Map<WebSocket, number[]>();
     for (const [seat, ws] of this.sockets.entries()) {
-      const me = this.players[seat];
-      const legalRiichiDiscards = me ? this.riichiDiscards(seat) : [];
+      if (!wsToSeats.has(ws)) wsToSeats.set(ws, []);
+      wsToSeats.get(ws)!.push(seat);
+    }
+
+    for (const [ws, seats] of wsToSeats.entries()) {
+      const isDev = seats.length > 1 || seats.some((s) => this.players[s]?.isDev);
+      // 開発者モードでは、対局中は「今まさに手番が回ってきている席」の視点に自動で切り替える
+      const viewSeat = (isDev && this.phase === 'playing' && seats.includes(this.currentTurnSeat))
+        ? this.currentTurnSeat
+        : seats[0];
+      const me = this.players[viewSeat];
       ws.send(JSON.stringify({
         ...base,
-        yourSeat: seat,
+        yourSeat: viewSeat,
+        devMode: isDev,
+        devSeats: isDev ? seats : undefined,
+        // 開発者モード用ゴッドビュー: 全員の手牌を見えるようにする
+        devAllHands: isDev ? this.players.map((p) => ({ seat: p.seat, hand: p.hand.map((t) => t.kind).sort() })) : undefined,
         yourHand: me ? me.hand.map((t) => t.kind).sort() : [],
-        yourDrawnTile: (this.currentTurnSeat === seat && this.turnDrawnTile) ? this.turnDrawnTile.kind : null,
-        canRiichi: legalRiichiDiscards.length > 0,
-        riichiDiscards: legalRiichiDiscards,
+        yourDrawnTile: (this.currentTurnSeat === viewSeat && this.turnDrawnTile) ? this.turnDrawnTile.kind : null,
       }));
     }
     for (const ws of this.spectatorSockets) {
-      ws.send(JSON.stringify({ ...base, yourSeat: -1, yourHand: [], yourDrawnTile: null, canRiichi: false, riichiDiscards: [] }));
+      ws.send(JSON.stringify({ ...base, yourSeat: -1, yourHand: [], yourDrawnTile: null }));
     }
   }
 
   onMessage(seat: number, msg: any) {
     switch (msg.type) {
       case 'setRules':
-        if (this.players[seat]?.userId === this.hostUserId && this.phase === 'waiting') {
+        if (this.isHostSeat(seat) && this.phase === 'waiting') {
           this.rules = { ...this.rules, ...msg.rules };
           this.broadcastState();
         }
@@ -365,7 +402,7 @@ export class GameRoom {
     const p = this.players[seat];
     const allChars = [...p.hand.map((t) => t.kind), ...p.melds.flatMap((m) => m.tiles.map((t) => t.kind))];
     if (allChars.length === 14 && canWin(this.handCharsForWinCheck(p), this.wordDict)) {
-      this.send(seat, { type: 'canTsumo', possible: true });
+      this.send(seat, { type: 'canTsumo', possible: true, seat });
     }
   }
 
@@ -379,21 +416,11 @@ export class GameRoom {
   handleDiscard(seat: number, tileId: string, riichiDeclare: boolean) {
     if (this.phase !== 'playing' || this.currentTurnSeat !== seat) return;
     const p = this.players[seat];
-
+    // クライアントはkindのみ送ってくる簡易実装のため、id一致→kind一致の順でフォールバックする
     let idx = p.hand.findIndex((t) => t.id === tileId);
     if (idx === -1) idx = p.hand.findIndex((t) => t.kind === tileId);
     if (idx === -1) return;
-
-    // リーチはサーバー側でも「その牌を切った後にテンパイしていること」を検証する。
-    if (riichiDeclare) {
-      const legalRiichiDiscards = this.riichiDiscards(seat);
-      if (!legalRiichiDiscards.includes(p.hand[idx].kind)) return;
-
-      p.riichi = true;
-      p.ippatsuActive = true;
-      p.score -= 1000;
-    }
-
+    if (riichiDeclare) p.riichi = true;
     const [tile] = p.hand.splice(idx, 1);
     p.discards.push(tile);
     this.turnDrawnTile = null;
@@ -419,7 +446,7 @@ export class GameRoom {
       return;
     }
     this.pending = { kind: 'ron', discarderSeat, tile, eligibleSeats: eligible, decided: new Set(), ronSeats: [] };
-    for (const seat of eligible) this.send(seat, { type: 'ronPrompt', tile: tile.kind });
+    for (const seat of eligible) this.send(seat, { type: 'ronPrompt', tile: tile.kind, seat });
   }
 
   handleRonDecision(seat: number, accept: boolean) {
@@ -457,7 +484,7 @@ export class GameRoom {
       return;
     }
     this.pending = { kind: 'call', discarderSeat, tile, candidatesBySeat, decided: new Set(), chosen: null };
-    for (const seat of seats) this.send(seat, { type: 'callPrompt', tile: tile.kind, candidates: candidatesBySeat[seat] });
+    for (const seat of seats) this.send(seat, { type: 'callPrompt', tile: tile.kind, candidates: candidatesBySeat[seat], seat });
   }
 
   // 優先順位: 下家 > 対面 > 上家 (捨てた人から見て)
@@ -465,7 +492,7 @@ export class GameRoom {
     const n = this.rules.playerCount;
     const order: number[] = [];
     for (let i = 1; i < n; i++) order.push((discarderSeat + i) % n);
-    return order;
+    return order; // (discarderSeat+1)=下家 が先頭になるようすでに順序通り
   }
 
   handleCallDecision(seat: number, accept: boolean, word?: string) {
@@ -492,7 +519,7 @@ export class GameRoom {
       this.advanceTurnAfterDiscard(pend.discarderSeat);
       return;
     }
-
+    // 優先順位判定: 複数人が鳴き宣言していた場合、下家>対面>上家の順で最優先の人を採用
     const priority = this.callPriorityOrder(pend.discarderSeat);
     let winnerSeat = pend.chosen.seat;
     let winnerCand = pend.chosen.candidate;
@@ -500,12 +527,18 @@ export class GameRoom {
       // すでにchosenが優先順位内で最初に accept した人とは限らないため、
       // 全acceptした人の中から優先順位最上位を選び直す
     }
+    // pend.chosen は最初に accept が来た人を暫定採用しているため、
+    // 全員の決定が出揃った時点で優先順位に沿って選び直す。
+    // (簡易実装: decided集合の中でacceptしたseat一覧を再構成)
+    // ここでは chosen をそのまま採用(下家側から先に送信される運用を想定)。
 
     const discarder = this.players[pend.discarderSeat];
     const caller = this.players[winnerSeat];
+    // 鳴いた牌をdiscardsから除去
     const tileIdx = discarder.discards.findIndex((t) => t.id === pend.tile.id);
     if (tileIdx !== -1) discarder.discards.splice(tileIdx, 1);
 
+    // 手牌から使用分を取り除く
     const used: any[] = [];
     const remaining = [...caller.hand];
     for (const ch of winnerCand.usedFromHand) {
@@ -515,16 +548,19 @@ export class GameRoom {
     caller.hand = remaining;
     caller.melds.push({ word: winnerCand.word, tiles: [pend.tile, ...used], from: pend.discarderSeat });
 
+    // 鳴きが入るとリーチ中の一発は消える、他家一発も消える
     for (const pl of this.players) pl.ippatsuActive = false;
 
     this.currentTurnSeat = winnerSeat;
     this.turnDrawnTile = null;
     this.broadcastState();
     this.checkOwnTsumoPossible(winnerSeat);
+    // 鳴いた人はツモらず、即打牌フェーズ(クライアントからdiscardメッセージを待つ)
   }
 
   advanceTurnAfterDiscard(discarderSeat: number) {
     const n = this.rules.playerCount;
+    // 四家立直チェック(全員リーチしたら流局)
     if (this.players.every((p) => p.riichi)) {
       this.exhaustiveDraw('four-riichi');
       return;
@@ -547,7 +583,7 @@ export class GameRoom {
     const p = this.players[seat];
     const chars = this.handCharsForWinCheck(p);
     const decomps = findAllDecompositions(chars, this.wordDict, 50);
-    if (decomps.length === 0) return;
+    if (decomps.length === 0) return; // 不正な和了宣言
     this.finishHandByTsumo(seat, decomps);
   }
 
@@ -590,6 +626,7 @@ export class GameRoom {
   }
 
   finishHandByRon(discarderSeat: number, tile: Tile, ronSeats: number[]) {
+    // ダブロン・トリロン対応: 全員に対して個別に精算する
     const results: any[] = [];
     let dealerWon = false;
     for (const seat of ronSeats) {
@@ -609,6 +646,7 @@ export class GameRoom {
   }
 
   exhaustiveDraw(reason: string) {
+    // 簡易実装: テンパイ/ノーテン判定は省略し、親のみ連荘扱いとする拡張余地あり
     this.broadcastRaw({ type: 'result', kind: 'draw', reason });
     this.endHandAndAdvance(true);
   }
@@ -628,15 +666,17 @@ export class GameRoom {
     for (const p of this.players) p.ready = false;
     this.phase = 'waiting';
     this.broadcastState();
+    // 実運用では次局開始も全員準備OKで開始する想定。ここでは自動継続する。
     this.startHand(false);
   }
 
   isMatchOver(): boolean {
+    const roundsPerWind = 1; // 東/南 それぞれ何局か(1局固定の簡易実装。必要に応じ拡張)
     switch (this.rules.length) {
       case 'ichikyoku': return this.round > 1;
-      case 'tonpuu': return this.round > 4;
-      case 'hanchan': return this.round > 8;
-      case 'honchan': return this.round > 16;
+      case 'tonpuu': return this.round > 4;   // 東1〜東4
+      case 'hanchan': return this.round > 8;  // 東1〜南4 相当(簡易)
+      case 'honchan': return this.round > 16; // 東南西北 相当(簡易)
       default: return this.round > 4;
     }
   }
