@@ -67,11 +67,11 @@ html, body { height: 100%; overflow: hidden; }
   z-index: 5;
 }
 
-/* 自分の手牌は画面左から左揃え */
+/* 自分の手牌は左揃え。ただし14枚の手牌全体の中心を画面中央(x=0)に合わせる */
 .seat.bottom {
   bottom: 3%;
-  left: 3%;
-  transform: none;
+  left: 50%;
+  transform: translateX(-50%);
   align-items: flex-start;
 }
 
