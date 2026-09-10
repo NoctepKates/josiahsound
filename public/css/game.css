@@ -108,21 +108,32 @@ html, body { height: 100%; overflow: hidden; }
 /* 川は手牌より下 */
 .river {
   position: absolute;
-  display: grid;
-  /* 1～30枚目：縦5列 × 各列6枚 */
-  grid-template-columns: repeat(5, var(--tile-w));
-  grid-template-rows: repeat(6, var(--river-tile-h));
-  grid-auto-flow: column;
-  /* 上下の牌の上端間隔を、牌1枚分(42px)にする */
-  column-gap: var(--tile-gap);
-  row-gap: 0;
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-content: flex-start;
+  width: calc(6 * var(--tile-w) + 5 * var(--tile-gap));
+  height: calc(5 * var(--river-tile-h));
+  gap: 0 var(--tile-gap);
   z-index: 3;
   pointer-events: none;
 }
 
-/* 31枚目以降はYを1列目へ戻し、6枚分右へ */
-.river .tile:nth-child(n + 31) {
-  transform: translateX(calc(6 * (var(--tile-w) + var(--tile-gap))));
+.river .tile {
+  flex: 0 0 var(--tile-w);
+  height: var(--river-tile-h);
+}
+
+/*
+ * 1～30枚目を横6枚 × 縦5行で配置。
+ * 31枚目以降は次の30枚ブロックとして右へ送る。
+ *
+ * nth-child(30n + 1) は 31, 61, 91... に一致するため、
+ * 60枚で打ち止めにはならず、その後も同じ規則が繰り返される。
+ */
+.river .tile:nth-child(30n + 1):not(:first-child) {
+  margin-left: calc(6 * (var(--tile-w) + var(--tile-gap)));
+  margin-top: calc(-5 * var(--river-tile-h));
 }
 
 .river.river-bottom {
