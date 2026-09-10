@@ -284,16 +284,7 @@ function render(s) {
 
     if (riverEl) {
       riverEl.innerHTML =
-        p.discards
-          .map((k) =>
-            tileHtml(
-              k,
-              false,
-              false,
-              true
-            )
-          )
-          .join('');
+        renderRiverTiles(p.discards);
     }
 
     const meldEl =
@@ -883,6 +874,31 @@ function digitHtml(ch) {
         .join('')}
     </div>
   `;
+}
+
+function renderRiverTiles(discards) {
+  const blocks = [];
+
+  for (let i = 0; i < discards.length; i += 30) {
+    const block = discards.slice(i, i + 30);
+
+    blocks.push(`
+      <div class="river-block">
+        ${block
+          .map((k) =>
+            tileHtml(
+              k,
+              false,
+              false,
+              true
+            )
+          )
+          .join('')}
+      </div>
+    `);
+  }
+
+  return blocks.join('');
 }
 
 function sevenSegNumber(

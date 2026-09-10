@@ -70,8 +70,8 @@ html, body { height: 100%; overflow: hidden; }
 /* 自分の手牌は左揃え。ただし14枚の手牌全体の中心を画面中央(x=0)に合わせる */
 .seat.bottom {
   bottom: 3%;
-  left: 50%;
-  transform: translateX(-50%);
+  left: 3%;
+  transform: none;
   align-items: flex-start;
 }
 
@@ -108,22 +108,25 @@ html, body { height: 100%; overflow: hidden; }
 /* 川は手牌より下 */
 .river {
   position: absolute;
-  display: grid;
+  display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  gap: 0;
+  z-index: 3;
+  pointer-events: none;
+}
 
-  /*
-   * 横6枚 × 縦5段
-   *
-   *  1  2  3  4  5  6
-   *  7  8  9 10 11 12
-   * 13 14 15 16 17 18
-   * 19 20 21 22 23 24
-   * 25 26 27 28 29 30
-   *
-   * 31枚目からは、この30枚のブロックを
-   * 右へ6枚分ずらして同じ形で配置する。
-   */
+.river-block {
+  display: grid;
   grid-template-columns: repeat(6, var(--tile-w));
   grid-template-rows: repeat(5, var(--river-tile-h));
+  column-gap: var(--tile-gap);
+  row-gap: 0;
+
+  flex: 0 0 calc(
+    6 * var(--tile-w) +
+    5 * var(--tile-gap)
+  );
 
   width: calc(
     6 * var(--tile-w) +
@@ -133,12 +136,6 @@ html, body { height: 100%; overflow: hidden; }
   height: calc(
     5 * var(--river-tile-h)
   );
-
-  column-gap: var(--tile-gap);
-  row-gap: 0;
-
-  z-index: 3;
-  pointer-events: none;
 }
 
 .river .tile {
@@ -153,22 +150,6 @@ html, body { height: 100%; overflow: hidden; }
  *
  * 31, 61, 91... を新しいブロックの先頭として扱う。
  */
-.river .tile:nth-child(30n + 1):not(:first-child) {
-  transform: translate(
-    calc(6 * (var(--tile-w) + var(--tile-gap))),
-    calc(-5 * var(--river-tile-h))
-  );
-}
-
-/*
- * 31枚目以降のブロックに属する牌も、
- * 先頭の31枚目と同じブロック位置へ追従させる。
- */
-.river .tile:nth-child(n + 31) {
-  position: relative;
-  left: calc(6 * (var(--tile-w) + var(--tile-gap)));
-  top: calc(-5 * var(--river-tile-h));
-}
 
 .river.river-bottom {
   top: calc(50% + var(--compass-size) / 2);
