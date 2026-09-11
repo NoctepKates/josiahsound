@@ -196,10 +196,15 @@ html, body { height: 100%; overflow: hidden; }
 }
 
 .river.river-top {
-  top: calc(50% - var(--compass-size) / 2);
+  top: calc(
+    50% -
+    var(--compass-size) / 2 -
+    5 * var(--river-tile-h) -
+    4px
+  );
   left: 50%;
   transform: translateX(-50%) rotate(180deg);
-  margin-bottom: 4px;
+  margin-bottom: 0;
 }
 
 .river.river-right {
