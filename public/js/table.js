@@ -6,6 +6,7 @@ let riichiMode = false;
 let canTsumoNow = false;
 let reconnectAttempts = 0;
 let dragFromIdx = null;
+let devGodView = true; // 開発者モード: 他プレイヤーの手牌も見えるようにするか
 
 let handOrder = [];
 
@@ -77,9 +78,9 @@ function connect() {
     if (msg.type === 'state') {
       render(msg);
     } else if (msg.type === 'ronPrompt') {
-      showRonPrompt(msg.tile);
+      showRonPrompt(msg.tile, msg.seat);
     } else if (msg.type === 'callPrompt') {
-      showCallPrompt(msg.tile, msg.candidates);
+      showCallPrompt(msg.tile, msg.candidates, msg.seat);
     } else if (msg.type === 'canTsumo') {
       canTsumoNow = msg.possible;
       renderActionBar();
@@ -128,7 +129,9 @@ function render(s) {
   const my = s.yourSeat;
 
   document.getElementById('roundInfo').textContent =
-    `第${s.round}局 (${s.honba}本場) / ドラ表示: ${s.doraIndicators.join(' ')}`;
+    `第${s.round}局 (${s.honba}本場)`;
+
+  renderDeadWall(s);
 
   const wallDigits = document.getElementById('wallDigits');
 
@@ -136,6 +139,8 @@ function render(s) {
     wallDigits.innerHTML =
       sevenSegNumber(s.wallRemaining, 2);
   }
+
+  renderDevBar(s);
 
   let drawnKind = null;
 
@@ -269,17 +274,29 @@ function render(s) {
 
       attachHandHandlers(handEl);
     } else {
-      handEl.innerHTML =
-        Array.from({ length: p.handCount })
-          .map(() =>
-            tileHtml(
-              null,
-              false,
-              false,
-              true
+      // 開発者モード + ゴッドビューONなら、他プレイヤーの手牌も実際の牌で表示する
+      const devHand = (s.devMode && devGodView && s.devAllHands)
+        ? s.devAllHands.find((h) => h.seat === seatNum)
+        : null;
+
+      if (devHand) {
+        handEl.innerHTML =
+          devHand.hand
+            .map((k) => tileHtml(k, false, false, true))
+            .join('');
+      } else {
+        handEl.innerHTML =
+          Array.from({ length: p.handCount })
+            .map(() =>
+              tileHtml(
+                null,
+                false,
+                false,
+                true
+              )
             )
-          )
-          .join('');
+            .join('');
+      }
     }
 
     if (riverEl) {
@@ -343,6 +360,75 @@ function tileHtml(
     >${kind || ''}</div>
   `;
 }
+
+// 王牌(嶺上牌を除く10枚)を卓の外に表示する。
+// ドラ表示牌(表になっている分)は実際の牌で、残りは裏向きで表示する。
+function renderDeadWall(s) {
+  const el = document.getElementById('deadWallTiles');
+  if (!el) return;
+  const TOTAL = 10; // 5列 × 2枚(嶺上牌なし)
+  const revealed = s.doraIndicators || [];
+  const tiles = [];
+  for (let i = 0; i < TOTAL; i++) {
+    if (i < revealed.length) {
+      tiles.push(tileHtml(revealed[i], false, false, true));
+    } else {
+      tiles.push(tileHtml(null, false, false, true));
+    }
+  }
+  el.innerHTML = tiles.join('');
+}
+
+// ---------- 開発者モード UI ----------
+function renderDevBar(s) {
+  const bar = document.getElementById('devBar');
+  if (!bar) return;
+  if (!s.devMode) { bar.classList.add('hidden'); return; }
+  bar.classList.remove('hidden');
+
+  const select = document.getElementById('devSeatSelect');
+  if (!select) return;
+  const options = (s.devSeats || []).map((seatNum) => {
+    const p = s.players[seatNum];
+    const label = `${seatNum === s.currentTurnSeat ? '▶ ' : ''}席${seatNum + 1}: ${p ? p.username : ''}`;
+    return `<option value="${seatNum}">${label}</option>`;
+  }).join('');
+  const prevSelected = select.value;
+  select.innerHTML = options;
+  if ([...select.options].some((o) => o.value === prevSelected)) select.value = prevSelected;
+}
+
+function updateDebugPanel() {
+  if (!state) return;
+  const seatSel = document.getElementById('devSeatSelect');
+  const inspectSeat = seatSel && seatSel.value !== '' ? Number(seatSel.value) : null;
+  let inspect = null;
+  if (inspectSeat !== null && state.devAllHands) {
+    const handEntry = state.devAllHands.find((h) => h.seat === inspectSeat);
+    const p = state.players[inspectSeat];
+    inspect = {
+      seat: inspectSeat,
+      username: p?.username,
+      hand: handEntry?.hand,
+      discards: p?.discards,
+      melds: p?.melds,
+      riichi: p?.riichi,
+      score: p?.score,
+    };
+  }
+  const jsonEl = document.getElementById('debugJson');
+  if (jsonEl) jsonEl.textContent = JSON.stringify({ inspectSeat: inspect, state }, null, 2);
+}
+
+document.getElementById('devGodView')?.addEventListener('change', (e) => {
+  devGodView = e.target.checked;
+  if (state) render(state);
+});
+document.getElementById('devSeatSelect')?.addEventListener('change', updateDebugPanel);
+document.getElementById('devDebugToggle')?.addEventListener('click', () => {
+  updateDebugPanel();
+  document.getElementById('debugModal')?.classList.remove('hidden');
+});
 
 function attachHandHandlers(handEl) {
   const tiles =
@@ -574,7 +660,33 @@ function renderActionBar() {
   }
 }
 
-function showRonPrompt(tile) {
+function showRonPrompt(tile, forSeat) {
+  enqueuePrompt({ kind: 'ron', tile, seat: forSeat });
+}
+
+function showCallPrompt(tile, candidates, forSeat) {
+  enqueuePrompt({ kind: 'call', tile, candidates, seat: forSeat });
+}
+
+// 開発者モードでは複数の席を同時に持つため、ロン/鳴きのプロンプトが同時に複数来ることがある。
+// 1つずつ順番に表示するキューを介する。
+let promptQueue = [];
+function enqueuePrompt(p) {
+  promptQueue.push(p);
+  if (promptQueue.length === 1) showNextPrompt();
+}
+function showNextPrompt() {
+  if (promptQueue.length === 0) { renderActionBar(); return; }
+  const p = promptQueue[0];
+  if (p.kind === 'ron') showRonPromptInner(p.tile, p.seat);
+  else showCallPromptInner(p.tile, p.candidates, p.seat);
+}
+function dequeueAndShowNext() {
+  promptQueue.shift();
+  showNextPrompt();
+}
+
+function showRonPromptInner(tile, forSeat) {
   const bar =
     document.getElementById('actionBar');
 
@@ -586,8 +698,9 @@ function showRonPrompt(tile) {
   wrap.className = 'panel';
   wrap.style.padding = '14px 20px';
 
+  const seatLabel = (state && state.devMode && forSeat !== undefined) ? `(席${forSeat + 1}) ` : '';
   wrap.innerHTML =
-    `<span style="margin-right:12px;">「${tile}」でロンできます</span>`;
+    `<span style="margin-right:12px;">${seatLabel}「${tile}」でロンできます</span>`;
 
   const yes =
     document.createElement('button');
@@ -602,11 +715,11 @@ function showRonPrompt(tile) {
       JSON.stringify({
         type: 'ronDecision',
         accept: true,
-        seat: state.yourSeat,
+        seat: forSeat !== undefined ? forSeat : state.yourSeat,
       })
     );
 
-    bar.innerHTML = '';
+    dequeueAndShowNext();
   };
 
   const no =
@@ -620,11 +733,11 @@ function showRonPrompt(tile) {
       JSON.stringify({
         type: 'ronDecision',
         accept: false,
-        seat: state.yourSeat,
+        seat: forSeat !== undefined ? forSeat : state.yourSeat,
       })
     );
 
-    bar.innerHTML = '';
+    dequeueAndShowNext();
   };
 
   wrap.appendChild(yes);
@@ -633,9 +746,10 @@ function showRonPrompt(tile) {
   bar.appendChild(wrap);
 }
 
-function showCallPrompt(
+function showCallPromptInner(
   tile,
-  candidates
+  candidates,
+  forSeat
 ) {
   const modal =
     document.getElementById(
@@ -646,6 +760,13 @@ function showCallPrompt(
     modal.classList.remove(
       'hidden'
     );
+    modal.dataset.forSeat = forSeat !== undefined ? String(forSeat) : '';
+  }
+
+  const titleEl = document.querySelector('#callModal h3');
+  if (titleEl) {
+    const seatLabel = (state && state.devMode && forSeat !== undefined) ? `(席${forSeat + 1}) ` : '';
+    titleEl.textContent = `${seatLabel}鳴きますか？`;
   }
 
   const container =
@@ -661,7 +782,7 @@ function showCallPrompt(
         (c) => `
           <button
             class="btn primary"
-            onclick="respondCall(true, '${c.word}')"
+            onclick="respondCall(true, '${c.word}', ${forSeat})"
           >
             ${c.word}（${c.han}翻）で鳴く
           </button>
@@ -672,27 +793,33 @@ function showCallPrompt(
 
 function respondCall(
   accept,
-  word
+  word,
+  forSeat
 ) {
+  const modal =
+    document.getElementById(
+      'callModal'
+    );
+  const seat = forSeat !== undefined
+    ? forSeat
+    : (modal && modal.dataset.forSeat ? Number(modal.dataset.forSeat) : state.yourSeat);
+
   ws.send(
     JSON.stringify({
       type: 'callDecision',
       accept,
       word,
-      seat: state.yourSeat,
+      seat,
     })
   );
-
-  const modal =
-    document.getElementById(
-      'callModal'
-    );
 
   if (modal) {
     modal.classList.add(
       'hidden'
     );
   }
+
+  dequeueAndShowNext();
 }
 
 function showResult(msg) {
