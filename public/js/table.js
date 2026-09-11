@@ -128,8 +128,12 @@ function render(s) {
   const n = s.rules.playerCount;
   const my = s.yourSeat;
 
+  const windIndex = Math.floor((s.round - 1) / 4);
+  const roundNumber = ((s.round - 1) % 4) + 1;
+  const roundWind = ['東', '南', '西', '北'][windIndex];
+
   document.getElementById('roundInfo').textContent =
-    `第${s.round}局 (${s.honba}本場)`;
+    `${roundWind}${roundNumber}局 (${s.honba}本場)`;
 
   renderDeadWall(s);
 
