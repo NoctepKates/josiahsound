@@ -366,7 +366,7 @@ function tileHtml(
 function renderDeadWall(s) {
   const el = document.getElementById('deadWallTiles');
   if (!el) return;
-  const TOTAL = 10; // 5列 × 2枚(嶺上牌なし)
+  const TOTAL = 5; // 王牌の表側5枚(裏ドラは和了時にしかめくられないので表示しない)
   const revealed = s.doraIndicators || [];
   const tiles = [];
   for (let i = 0; i < TOTAL; i++) {

@@ -10,16 +10,13 @@
 
 <header style="display:flex; align-items:center; justify-content:space-between; padding:8px 24px;">
   <div class="title-logo" style="font-size:18px;">下麻</div>
-  <div style="display:flex; align-items:center; gap:14px;">
-    <div id="devBar" class="dev-bar hidden">
-      <span class="dev-badge">🛠 開発者モード</span>
-      <label style="display:flex; align-items:center; gap:4px;">
-        <input type="checkbox" id="devGodView" checked style="width:auto;" /> 全員の手牌を見る
-      </label>
-      <select id="devSeatSelect"></select>
-      <button class="btn" id="devDebugToggle" style="padding:6px 10px; font-size:12px;">Debug</button>
-    </div>
-    <div id="roundInfo" style="font-size:13px; color:var(--text-sub);"></div>
+  <div id="devBar" class="dev-bar hidden">
+    <span class="dev-badge">🛠 開発者モード</span>
+    <label style="display:flex; align-items:center; gap:4px;">
+      <input type="checkbox" id="devGodView" checked style="width:auto;" /> 全員の手牌を見る
+    </label>
+    <select id="devSeatSelect"></select>
+    <button class="btn" id="devDebugToggle" style="padding:6px 10px; font-size:12px;">Debug</button>
   </div>
 </header>
 
@@ -32,10 +29,12 @@
   </div>
 </div>
 
-<!-- 王牌(嶺上牌を除く10枚。ドラ表示牌はここに実際の牌で表示する) -->
-<div class="dead-wall-bar" id="deadWallBar">
-  <span class="dead-wall-label">王牌</span>
-  <div class="dead-wall-tiles" id="deadWallTiles"></div>
+<!-- 卓の左側の余白に固定表示: 局・本場 + 王牌の表側5枚(裏ドラは和了時のみめくるため非表示) -->
+<div class="side-info-panel" id="sideInfoPanel">
+  <div id="roundInfo" class="round-info-large"></div>
+  <div class="dead-wall-bar" id="deadWallBar">
+    <div class="dead-wall-tiles" id="deadWallTiles"></div>
+  </div>
 </div>
 
 <div class="table-wrap" id="table">
