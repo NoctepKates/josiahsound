@@ -23,7 +23,7 @@ export const DAKUTEN_ORDER: string[] = [
   'ゔ',
 ]; // 26
 
-export const SMALL_ORDER: string[] = ['ぁ', 'ぃ', 'ぅ', 'ぇ', 'ぉ', 'っ', 'ゃ', 'ゅ', 'ょ']; // 9
+export const SMALL_ORDER: string[] = ['っ', 'ゃ', 'ゅ', 'ょ']; // 4
 export const CHOON_ORDER: string[] = ['ー']; // 1
 
 // ドラ計算用の全体順序（この配列内で「次」がドラになる。末尾は先頭に循環）
@@ -32,7 +32,7 @@ export const DORA_SEQUENCE: string[] = [
   ...DAKUTEN_ORDER,
   ...SMALL_ORDER,
   ...CHOON_ORDER,
-]; // 82
+]; // 77
 
 export const ALL_TILE_KINDS: string[] = DORA_SEQUENCE;
 
