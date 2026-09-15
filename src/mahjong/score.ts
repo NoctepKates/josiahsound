@@ -1,3 +1,4 @@
+import { findSpecialYakus } from './yaku';
 import { isSpecialChar } from './tiles';
 import type { WordDef } from './words';
 
@@ -52,6 +53,15 @@ export function computeHan(
 ): { han: number; breakdown: { label: string; han: number }[] } {
   const breakdown: { label: string; han: number }[] = [];
   let han = 0;
+  const specialYakus = findSpecialYakus(words);
+
+  for (const yaku of specialYakus) {
+    han += yaku.han;
+    yakuList.push({
+      name: yaku.name,
+      han: yaku.han,
+    });
+  }
   for (const w of words) {
     const h = hanForWord(w, dict);
     han += h;
@@ -64,7 +74,7 @@ export function computeHan(
 }
 
 function limitFor(han: number): { name: string | null; base: number | null } {
-  if (han >= 13) return { name: '役満', base: 8000 };
+  if (han >= 13) return { name: '数え役満', base: 8000 };
   if (han >= 11) return { name: '三倍満', base: 6000 };
   if (han >= 8) return { name: '倍満', base: 4000 };
   if (han >= 6) return { name: '跳満', base: 3000 };

@@ -4,8 +4,9 @@
 import { ALL_TILE_KINDS } from './tiles';
 
 export interface WordDef {
-  word: string;   // 例: "ありがとう"
-  han: number;    // この単語が確定したときの飜数
+  word: string;
+  han: number;
+  tag?: string[];
 }
 
 export type CharCount = Record<string, number>;
