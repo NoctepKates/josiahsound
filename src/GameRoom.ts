@@ -71,6 +71,11 @@ export class GameRoom {
   deadWall: Tile[] = [];
   doraIndicators: string[] = [];
   uraDoraIndicators: string[] = [];
+
+  // カン管理
+  kanCount = 0;
+  kanSeats: Set<number> = new Set();
+
   currentTurnSeat = 0;
   turnDrawnTile: Tile | null = null;
   pending: Pending = null;
@@ -368,8 +373,18 @@ export class GameRoom {
 
     const n = this.rules.playerCount;
     this.wall = buildWall(this.rules.tileCountPerKind);
-    // 王牌: 5列(1列2枚)=10枚。嶺上牌なし。
-    this.deadWall = this.wall.splice(this.wall.length - 10, 10);
+
+    // 王牌14枚
+    // [0..3]   = 嶺上牌4枚
+    // [4,6,8,10,12] = ドラ表示牌
+    // [5,7,9,11,13] = 裏ドラ表示牌
+    //
+    // 画面上はドラ表示牌5枚分だけ表示するが、
+    // 内部では王牌14枚を保持する。
+    this.deadWall = this.wall.splice(this.wall.length - 14, 14);
+
+    this.kanCount = 0;
+    this.kanSeats = new Set();
 
     for (const p of this.players) {
       p.hand = []; p.discards = []; p.melds = []; p.riichi = false; p.ippatsuActive = false;
@@ -391,10 +406,11 @@ export class GameRoom {
       this.players[seat].hand.push(...this.wall.splice(0, 1));
     }
 
-    // ドラ表示牌
-    const indicatorTile = this.deadWall[0];
-    this.doraIndicators = [indicatorTile.kind];
-    this.uraDoraIndicators = [this.deadWall[1].kind];
+    // 最初のドラ表示牌
+    // deadWall[4] = 表ドラ
+    // deadWall[5] = 裏ドラ
+    this.doraIndicators = [this.deadWall[4].kind];
+    this.uraDoraIndicators = [this.deadWall[5].kind];
 
     this.phase = 'playing';
     this.currentTurnSeat = this.dealerSeat;
@@ -551,28 +567,119 @@ export class GameRoom {
 
     const discarder = this.players[pend.discarderSeat];
     const caller = this.players[winnerSeat];
-    // 鳴いた牌をdiscardsから除去
-    const tileIdx = discarder.discards.findIndex((t) => t.id === pend.tile.id);
-    if (tileIdx !== -1) discarder.discards.splice(tileIdx, 1);
+
+    // 鳴いた牌を捨て牌から除去
+    const tileIdx = discarder.discards.findIndex(
+      (t) => t.id === pend.tile.id
+    );
+    if (tileIdx !== -1) {
+      discarder.discards.splice(tileIdx, 1);
+    }
 
     // 手牌から使用分を取り除く
-    const used: any[] = [];
+    const used: Tile[] = [];
     const remaining = [...caller.hand];
+
     for (const ch of winnerCand.usedFromHand) {
       const idx = remaining.findIndex((t) => t.kind === ch);
-      if (idx !== -1) { used.push(remaining[idx]); remaining.splice(idx, 1); }
+      if (idx !== -1) {
+        used.push(remaining[idx]);
+        remaining.splice(idx, 1);
+      }
     }
+
     caller.hand = remaining;
-    caller.melds.push({ word: winnerCand.word, tiles: [pend.tile, ...used], from: pend.discarderSeat });
 
-    // 鳴きが入るとリーチ中の一発は消える、他家一発も消える
-    for (const pl of this.players) pl.ippatsuActive = false;
+    const meldTiles = [pend.tile, ...used];
 
+    caller.melds.push({
+      word: winnerCand.word,
+      tiles: meldTiles,
+      from: pend.discarderSeat,
+    });
+
+    // 鳴きが入ったので一発は消える
+    for (const pl of this.players) {
+      pl.ippatsuActive = false;
+    }
+
+    // --------------------------------------------------
+    // 5文字以上の単語で完成した鳴きは内部的に「カン」として扱う
+    // --------------------------------------------------
+    const isKan = winnerCand.word.length >= 5;
+
+    if (isKan) {
+      this.kanCount += 1;
+      this.kanSeats.add(winnerSeat);
+
+      // 複数人による計4回目のカン → 四槓散了
+      // 同一人物だけで4回なら四槓子を目指せるので続行。
+      if (this.kanCount >= 4 && this.kanSeats.size >= 2) {
+        this.currentTurnSeat = winnerSeat;
+        this.turnDrawnTile = null;
+        this.broadcastState();
+        this.exhaustiveDraw('four-kan');
+        return;
+      }
+
+      // カン成立時に新しいドラ表示牌をめくる。
+      // 1回目: deadWall[4]
+      // 2回目: deadWall[6]
+      // 3回目: deadWall[8]
+      // 4回目: deadWall[10]
+      // したがって裏ドラ側は [5,7,9,11,13]
+      const doraIndex = 4 + (this.kanCount - 1) * 2;
+      const uraIndex = doraIndex + 1;
+
+      if (
+        doraIndex >= this.deadWall.length ||
+        uraIndex >= this.deadWall.length
+      ) {
+        this.currentTurnSeat = winnerSeat;
+        this.turnDrawnTile = null;
+        this.broadcastState();
+        this.exhaustiveDraw('dead-wall-error');
+        return;
+      }
+
+      this.doraIndicators.push(this.deadWall[doraIndex].kind);
+      this.uraDoraIndicators.push(this.deadWall[uraIndex].kind);
+
+      // 嶺上牌からツモる
+      // deadWall[0], [1], [2], [3] の4枚を順番に使う
+      const rinshanIndex = this.kanCount - 1;
+      const drawn = this.deadWall[rinshanIndex];
+
+      if (!drawn) {
+        this.currentTurnSeat = winnerSeat;
+        this.turnDrawnTile = null;
+        this.broadcastState();
+        this.exhaustiveDraw('rinshan-empty');
+        return;
+      }
+
+      caller.hand.push(drawn);
+
+      this.currentTurnSeat = winnerSeat;
+      this.turnDrawnTile = drawn;
+
+      this.broadcastState();
+      this.checkOwnTsumoPossible(winnerSeat);
+
+      // カンした人は嶺上牌をツモった状態で打牌待ち
+      return;
+    }
+
+    // --------------------------------------------------
+    // 通常の鳴き
+    // --------------------------------------------------
     this.currentTurnSeat = winnerSeat;
     this.turnDrawnTile = null;
+
     this.broadcastState();
     this.checkOwnTsumoPossible(winnerSeat);
-    // 鳴いた人はツモらず、即打牌フェーズ(クライアントからdiscardメッセージを待つ)
+
+    // 通常の鳴きはツモらず、そのまま打牌
   }
 
   advanceTurnAfterDiscard(discarderSeat: number) {
