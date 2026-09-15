@@ -72,6 +72,10 @@ export class GameRoom {
   doraIndicators: string[] = [];
   uraDoraIndicators: string[] = [];
 
+  // 開発者モード用：対局開始時の山の並びと、そこから何枚消費したか
+  wallSequence: Tile[] = [];
+  wallDrawIndex = 0;
+
   // カン管理
   kanCount = 0;
   kanSeats: Set<number> = new Set();
@@ -310,6 +314,22 @@ export class GameRoom {
         devSeats: isDev ? seats : undefined,
         // 開発者モード用ゴッドビュー: 全員の手牌を見えるようにする
         devAllHands: isDev ? this.players.map((p) => ({ seat: p.seat, hand: p.hand.map((t) => t.kind).sort() })) : undefined,
+        // 開発者モードのみ、山の全体像を送る。
+        // history = 既に消費された牌
+        // future  = これからツモる牌
+        devWall: isDev
+          ? {
+              history: this.wallSequence
+                .slice(0, this.wallDrawIndex)
+                .map((t) => t.kind),
+              future: this.wallSequence
+                .slice(this.wallDrawIndex)
+                .map((t) => t.kind),
+              drawIndex: this.wallDrawIndex,
+              total: this.wallSequence.length,
+            }
+          : undefined,
+
         yourHand: me ? me.hand.map((t) => t.kind).sort() : [],
         yourDrawnTile: (this.currentTurnSeat === viewSeat && this.turnDrawnTile) ? this.turnDrawnTile.kind : null,
         // 実際にテンパイになる場合のみtrue(サーバー側で判定した正式な値)
@@ -375,13 +395,12 @@ export class GameRoom {
     this.wall = buildWall(this.rules.tileCountPerKind);
 
     // 王牌14枚
-    // [0..3]   = 嶺上牌4枚
-    // [4,6,8,10,12] = ドラ表示牌
-    // [5,7,9,11,13] = 裏ドラ表示牌
-    //
-    // 画面上はドラ表示牌5枚分だけ表示するが、
-    // 内部では王牌14枚を保持する。
     this.deadWall = this.wall.splice(this.wall.length - 14, 14);
+
+    // 王牌を除いた実際の山の並びを記録
+    // 以後ここから何枚消費されたかを wallDrawIndex で管理する。
+    this.wallSequence = [...this.wall];
+    this.wallDrawIndex = 0;
 
     this.kanCount = 0;
     this.kanSeats = new Set();
@@ -395,15 +414,20 @@ export class GameRoom {
       for (let i = 0; i < n; i++) {
         const seat = (this.dealerSeat + i) % n;
         const draw = this.wall.splice(0, 4);
+        this.wallDrawIndex += draw.length;
         this.players[seat].hand.push(...draw);
       }
     }
     // 親はチョンチョン(2枚)
-    this.players[this.dealerSeat].hand.push(...this.wall.splice(0, 2));
+    const dealerDraw = this.wall.splice(0, 2);
+    this.wallDrawIndex += dealerDraw.length;
+    this.players[this.dealerSeat].hand.push(...dealerDraw);
     // 残りは1枚ずつ
     for (let i = 1; i < n; i++) {
       const seat = (this.dealerSeat + i) % n;
-      this.players[seat].hand.push(...this.wall.splice(0, 1));
+      const draw = this.wall.splice(0, 1);
+      this.wallDrawIndex += draw.length;
+      this.players[seat].hand.push(...draw);
     }
 
     // 最初のドラ表示牌
@@ -696,6 +720,7 @@ export class GameRoom {
     const nextSeat = (discarderSeat + 1) % n;
     this.currentTurnSeat = nextSeat;
     const drawn = this.wall.shift()!;
+    this.wallDrawIndex += 1;
     this.players[nextSeat].hand.push(drawn);
     this.turnDrawnTile = drawn;
     this.broadcastState();

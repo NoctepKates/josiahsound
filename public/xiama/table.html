@@ -12,11 +12,29 @@
   <div class="title-logo" style="font-size:18px;">下麻</div>
   <div id="devBar" class="dev-bar hidden">
     <span class="dev-badge">🛠 開発者モード</span>
+
     <label style="display:flex; align-items:center; gap:4px;">
-      <input type="checkbox" id="devGodView" checked style="width:auto;" /> 全員の手牌を見る
+      <input
+        type="checkbox"
+        id="devGodView"
+        checked
+        style="width:auto;"
+      /> 全員の手牌を見る
     </label>
+
     <select id="devSeatSelect"></select>
-    <button class="btn" id="devDebugToggle" style="padding:6px 10px; font-size:12px;">Debug</button>
+
+    <button
+      class="btn"
+      id="devWallToggle"
+      style="padding:6px 10px; font-size:12px;"
+    >山を見る</button>
+
+    <button
+      class="btn"
+      id="devDebugToggle"
+      style="padding:6px 10px; font-size:12px;"
+    >Debug</button>
   </div>
 </header>
 
@@ -34,6 +52,24 @@
   <div id="roundInfo" class="round-info-large"></div>
   <div class="dead-wall-bar" id="deadWallBar">
     <div class="dead-wall-tiles" id="deadWallTiles"></div>
+  </div>
+</div>
+
+<!-- 開発者モード: 山確認 -->
+<div class="modal-overlay hidden" id="wallModal">
+  <div class="panel modal dev-wall-modal">
+    <div class="dev-wall-header">
+      <h3>山</h3>
+      <button
+        class="btn"
+        id="devWallClose"
+        style="padding:6px 10px; font-size:12px;"
+      >閉じる</button>
+    </div>
+
+    <div id="devWallStatus" class="dev-wall-status"></div>
+
+    <div id="devWallTiles" class="dev-wall-tiles"></div>
   </div>
 </div>
 

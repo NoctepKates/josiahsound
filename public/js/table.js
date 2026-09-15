@@ -7,6 +7,7 @@ let canTsumoNow = false;
 let reconnectAttempts = 0;
 let dragFromIdx = null;
 let devGodView = true; // 開発者モード: 他プレイヤーの手牌も見えるようにするか
+let devWallVisible = false;
 
 let handOrder = [];
 
@@ -330,6 +331,7 @@ function render(s) {
   }
 
   renderActionBar();
+  renderDevWall(s);
 }
 
 function tileHtml(
@@ -398,6 +400,50 @@ function renderDevBar(s) {
   if ([...select.options].some((o) => o.value === prevSelected)) select.value = prevSelected;
 }
 
+function renderDevWall(s) {
+  const modal = document.getElementById('wallModal');
+  const tilesEl = document.getElementById('devWallTiles');
+  const statusEl = document.getElementById('devWallStatus');
+
+  if (!modal || !tilesEl || !statusEl) return;
+
+  if (!s.devMode || !devWallVisible || !s.devWall) {
+    modal.classList.add('hidden');
+    return;
+  }
+
+  const history = s.devWall.history || [];
+  const future = s.devWall.future || [];
+
+  statusEl.textContent =
+    `消費済み ${history.length}枚 / 残り ${future.length}枚 / ` +
+    `合計 ${s.devWall.total || history.length + future.length}枚`;
+
+  let html = '';
+
+  // 既に消費された牌
+  for (const kind of history) {
+    html += `
+      <div class="dev-wall-tile used">${kind}</div>
+    `;
+  }
+
+  // 現在位置
+  html += `
+    <div class="dev-wall-divider"></div>
+  `;
+
+  // これからツモる牌
+  for (const kind of future) {
+    html += `
+      <div class="dev-wall-tile future">${kind}</div>
+    `;
+  }
+
+  tilesEl.innerHTML = html;
+  modal.classList.remove('hidden');
+}
+
 function updateDebugPanel() {
   if (!state) return;
   const seatSel = document.getElementById('devSeatSelect');
@@ -423,6 +469,33 @@ function updateDebugPanel() {
 document.getElementById('devGodView')?.addEventListener('change', (e) => {
   devGodView = e.target.checked;
   if (state) render(state);
+});
+document.getElementById('devWallToggle')?.addEventListener('click', () => {
+  if (!state || !state.devMode) return;
+
+  devWallVisible = !devWallVisible;
+
+  const button = document.getElementById('devWallToggle');
+
+  if (button) {
+    button.textContent = devWallVisible
+      ? '山を閉じる'
+      : '山を見る';
+  }
+
+  renderDevWall(state);
+});
+
+document.getElementById('devWallClose')?.addEventListener('click', () => {
+  devWallVisible = false;
+
+  const button = document.getElementById('devWallToggle');
+
+  if (button) {
+    button.textContent = '山を見る';
+  }
+
+  document.getElementById('wallModal')?.classList.add('hidden');
 });
 document.getElementById('devSeatSelect')?.addEventListener('change', updateDebugPanel);
 document.getElementById('devDebugToggle')?.addEventListener('click', () => {
