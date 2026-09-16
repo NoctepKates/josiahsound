@@ -591,23 +591,36 @@ function attachHandHandlers(handEl) {
 function renderHandOnly() {
   if (!state) return;
 
-  const handEl =
-    document.getElementById('hand-self');
+  const handEl = document.getElementById('hand-self');
 
-  if (!handEl) return;
+  const mainTiles = handOrder.map((kind, idx) =>
+    tileHtml(
+      kind,
+      kind === selectedTileId,
+      true,
+      false,
+      idx
+    )
+  );
 
-  handEl.innerHTML =
-    handOrder
-      .map((kind, idx) =>
-        tileHtml(
-          kind,
-          kind === selectedTileId,
-          true,
-          false,
-          idx
-        )
-      )
-      .join('');
+  let drawnTileHtml = '';
+
+  // ツモ牌が手牌の並び替え対象にまだ入っていない場合だけ表示する
+  if (
+    state.yourDrawnTile &&
+    !handOrder.includes(state.yourDrawnTile)
+  ) {
+    drawnTileHtml = tileHtml(
+      state.yourDrawnTile,
+      state.yourDrawnTile === selectedTileId,
+      true,
+      false,
+      -1,
+      true
+    );
+  }
+
+  handEl.innerHTML = mainTiles.join('') + drawnTileHtml;
 
   attachHandHandlers(handEl);
 }
