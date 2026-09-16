@@ -53,23 +53,48 @@ export function computeHan(
 ): { han: number; breakdown: { label: string; han: number }[] } {
   const breakdown: { label: string; han: number }[] = [];
   let han = 0;
-  const specialYakus = findSpecialYakus(words);
+
+  // 単語文字列 → 辞書定義に変換
+  const wordDefs: WordDef[] = words
+    .map((word) => dict.find((d) => d.word === word))
+    .filter((d): d is WordDef => d !== undefined);
+
+  // タグによる特殊役
+  const specialYakus = findSpecialYakus(wordDefs);
 
   for (const yaku of specialYakus) {
     han += yaku.han;
-    yakuList.push({
-      name: yaku.name,
+    breakdown.push({
+      label: yaku.name,
       han: yaku.han,
     });
   }
+
+  // 単語そのものの飜数
   for (const w of words) {
     const h = hanForWord(w, dict);
     han += h;
     breakdown.push({ label: w, han: h });
   }
-  if (riichi) { han += 1; breakdown.push({ label: 'リーチ', han: 1 }); }
-  if (ippatsu) { han += 1; breakdown.push({ label: '一発', han: 1 }); }
-  if (doraCount > 0) { han += doraCount; breakdown.push({ label: `ドラ${doraCount}`, han: doraCount }); }
+
+  if (riichi) {
+    han += 1;
+    breakdown.push({ label: 'リーチ', han: 1 });
+  }
+
+  if (ippatsu) {
+    han += 1;
+    breakdown.push({ label: '一発', han: 1 });
+  }
+
+  if (doraCount > 0) {
+    han += doraCount;
+    breakdown.push({
+      label: `ドラ${doraCount}`,
+      han: doraCount,
+    });
+  }
+
   return { han, breakdown };
 }
 
