@@ -38,11 +38,14 @@ export const specialYakus: SpecialYaku[] = [
 
 
   {
-    name: 'これは、夢なのか、現実なのか…。'
+    name: 'これは、夢なのか、現実なのか…。',
     han: 2,
 
     check(words) {
       return allHaveTag(words, 'IMP');
+    }
+  },
+
 
   {
     name: '第一章 極道脅迫！体育部員たちの逆襲',
