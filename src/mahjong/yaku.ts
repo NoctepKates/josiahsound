@@ -2,36 +2,18 @@ import { WordDef } from './words';
 
 export interface SpecialYaku {
   name: string;
-  han: number;
-
-  // 成立条件
+  han: number | 'y';
   check(words: WordDef[]): boolean;
 }
 
-
-// タグだけを取り出す補助関数
 function hasTag(word: WordDef, tag: string): boolean {
-  const tags = (word as any).tag;
-
-  if (!tags) return false;
-
-  if (Array.isArray(tags)) {
-    return tags.includes(tag);
-  }
-
-  return String(tags)
-    .split(/\s+/)
-    .includes(tag);
+  return word.tag?.includes(tag) ?? false;
 }
 
-
-// 全ての牌が指定タグを持つ
 function allHaveTag(words: WordDef[], tag: string): boolean {
   if (words.length === 0) return false;
-
-  return words.every(word => hasTag(word, tag));
+  return words.every((word) => hasTag(word, tag));
 }
-
 
 export const specialYakus: SpecialYaku[] = [
 
@@ -104,9 +86,8 @@ export const specialYakus: SpecialYaku[] = [
 ];
 
 
-// 通常役と同じように呼び出す用
-export function findSpecialYakus(words: WordDef[]) {
-  const result: SpecialYaku[] = [];
+export function findSpecialYakus(words: WordDef[]): SpecialYaku[] {
+  const result = specialYakus.filter((yaku) => yaku.check(words));
 
   for (const yaku of specialYakus) {
     if (yaku.check(words)) {

@@ -28,7 +28,10 @@ export interface ScoreResult {
   };
 }
 
-function hanForWord(word: string, dict: WordDef[]): number {
+function hanForWord(
+  word: string,
+  dict: WordDef[],
+): number | 'y' {
   const found = dict.find((d) => d.word === word);
   return found ? found.han : 1;
 }
@@ -50,9 +53,14 @@ export function computeHan(
   doraCount: number,
   riichi: boolean,
   ippatsu: boolean,
-): { han: number; breakdown: { label: string; han: number }[] } {
-  const breakdown: { label: string; han: number }[] = [];
+): {
+  han: number;
+  hasYakuman: boolean;
+  breakdown: { label: string; han: number | 'y' }[];
+} {
+  const breakdown: { label: string; han: number | 'y' }[] = [];
   let han = 0;
+  let hasYakuman = false;
 
   // 単語文字列 → 辞書定義に変換
   const wordDefs: WordDef[] = words
@@ -63,18 +71,38 @@ export function computeHan(
   const specialYakus = findSpecialYakus(wordDefs);
 
   for (const yaku of specialYakus) {
-    han += yaku.han;
-    breakdown.push({
-      label: yaku.name,
-      han: yaku.han,
-    });
+    if (yaku.han === 'y') {
+      hasYakuman = true;
+      breakdown.push({
+        label: yaku.name,
+        han: 'y',
+      });
+    } else {
+      han += yaku.han;
+      breakdown.push({
+        label: yaku.name,
+        han: yaku.han,
+      });
+    }
   }
 
   // 単語そのものの飜数
   for (const w of words) {
     const h = hanForWord(w, dict);
-    han += h;
-    breakdown.push({ label: w, han: h });
+
+    if (h === 'y') {
+      hasYakuman = true;
+      breakdown.push({
+        label: w,
+        han: 'y',
+      });
+    } else {
+      han += h;
+      breakdown.push({
+        label: w,
+        han: h,
+      });
+    }
   }
 
   if (riichi) {
@@ -95,15 +123,41 @@ export function computeHan(
     });
   }
 
-  return { han, breakdown };
+  return {
+    han,
+    hasYakuman,
+    breakdown,
+  };
 }
 
-function limitFor(han: number): { name: string | null; base: number | null } {
-  if (han >= 13) return { name: '数え役満', base: 8000 };
-  if (han >= 11) return { name: '三倍満', base: 6000 };
-  if (han >= 8) return { name: '倍満', base: 4000 };
-  if (han >= 6) return { name: '跳満', base: 3000 };
-  if (han >= 5) return { name: '満貫', base: 2000 };
+function limitFor(
+  han: number,
+  hasYakuman: boolean,
+): { name: string | null; base: number | null } {
+  if (hasYakuman) {
+    return { name: '役満', base: 8000 };
+  }
+
+  if (han >= 13) {
+    return { name: '数え役満', base: 8000 };
+  }
+
+  if (han >= 11) {
+    return { name: '三倍満', base: 6000 };
+  }
+
+  if (han >= 8) {
+    return { name: '倍満', base: 4000 };
+  }
+
+  if (han >= 6) {
+    return { name: '跳満', base: 3000 };
+  }
+
+  if (han >= 5) {
+    return { name: '満貫', base: 2000 };
+  }
+
   return { name: null, base: null };
 }
 
@@ -112,7 +166,7 @@ export function computeScore(input: ScoreInput): ScoreResult {
   const isChiitoi = input.words.length === 7 && input.words.every((w) => w.length === 2);
 
   const fu = computeFu(input.words, isChiitoi);
-  const { han, breakdown } = computeHan(
+  const { han, hasYakuman, breakdown } = computeHan(
     input.words,
     input.dict,
     input.handWithDoraCount,
@@ -120,7 +174,7 @@ export function computeScore(input: ScoreInput): ScoreResult {
     input.ippatsu,
   );
 
-  const limit = limitFor(han);
+  const limit = limitFor(han, hasYakuman);
   let basePoints: number;
   if (limit.base !== null) {
     basePoints = limit.base;
