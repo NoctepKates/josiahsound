@@ -9,7 +9,7 @@ let dragFromIdx = null;
 let devGodView = true; // 開発者モード: 他プレイヤーの手牌も見えるようにするか
 let devWallVisible = false;
 
-let handOrder = [];
+let handOrder = [ { id, king } ];
 
 const SEAT_DIV_ORDER = ['self', 'r1', 'r2', 'r3'];
 
@@ -105,20 +105,20 @@ function connect() {
   };
 }
 
-function reconcileHandOrder(newKinds) {
-  const remaining = [...newKinds];
+function reconcileHandOrder(newTiles) {
+  const remaining = [...newTiles];
   const kept = [];
 
-  for (const k of handOrder) {
-    const idx = remaining.indexOf(k);
+  for (const oldTile of handOrder) {
+    const idx = remaining.findIndex((t) => t.id === oldTile.id);
 
     if (idx !== -1) {
-      kept.push(k);
+      kept.push(remaining[idx]);
       remaining.splice(idx, 1);
     }
   }
 
-  remaining.sort();
+  remaining.sort((a, b) => a.kind.localeCompare(b.kind));
   handOrder = [...kept, ...remaining];
 }
 
@@ -143,16 +143,18 @@ function render(s) {
 
   renderDevBar(s);
 
-  let drawnKind = null;
+  let drawnTile = null;
 
   if (my !== -1) {
     const hand = [...s.yourHand];
 
     if (s.yourDrawnTile) {
-      const idx = hand.lastIndexOf(s.yourDrawnTile);
+      const idx = hand.findIndex(
+        (t) => t.id === s.yourDrawnTile.id
+      );
 
       if (idx !== -1) {
-        drawnKind = hand.splice(idx, 1)[0];
+        drawnTile = hand.splice(idx, 1)[0];
       }
     }
 
@@ -257,11 +259,20 @@ function render(s) {
           )
       );
 
-      const drawnTileHtml = drawnKind
+      const mainTiles = handOrder.map((tile, idx) =>
+        tileHtml(
+          tile.kind,
+          tile.id === selectedTileId,
+          true,
+          false,
+          idx
+        )
+      );
+
+      const drawnTileHtml = drawnTile
         ? tileHtml(
-            drawnKind,
-            drawnKind === selectedTileId &&
-              !handOrder.includes(selectedTileId),
+            drawnTile.kind,
+            drawnTile.id === selectedTileId,
             true,
             false,
             -1,
@@ -334,14 +345,7 @@ function render(s) {
   renderDevWall(s);
 }
 
-function tileHtml(
-  kind,
-  selected,
-  selectable,
-  small,
-  idx,
-  isDrawn
-) {
+function tileHtml(kind, selected, selectable, small, idx, isDrawn, tileId) {
   const cls = ['tile'];
 
   if (small) cls.push('small');
@@ -350,17 +354,14 @@ function tileHtml(
   if (isDrawn) cls.push('drawn-tile');
 
   const dataAttrs = selectable
-    ? `data-kind="${kind}" data-idx="${idx}" ${
-        isDrawn ? 'data-drawn="1"' : ''
-      } draggable="true"`
+    ? `data-kind="${kind}"
+       data-idx="${idx}"
+       data-tile-id="${tileId || ''}"
+       ${isDrawn ? 'data-drawn="1"' : ''}
+       draggable="true"`
     : '';
 
-  return `
-    <div
-      class="${cls.join(' ')}"
-      ${dataAttrs}
-    >${kind || ''}</div>
-  `;
+  return `<div class="${cls.join(' ')}" ${dataAttrs}>${kind || ''}</div>`;
 }
 
 // 王牌(嶺上牌を除く10枚)を卓の外に表示する。

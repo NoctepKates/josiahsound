@@ -330,8 +330,19 @@ export class GameRoom {
             }
           : undefined,
 
-        yourHand: me ? me.hand.map((t) => t.kind).sort() : [],
-        yourDrawnTile: (this.currentTurnSeat === viewSeat && this.turnDrawnTile) ? this.turnDrawnTile.kind : null,
+        yourHand: me
+          ? me.hand
+              .map((t) => ({ id: t.id, kind: t.kind }))
+              .sort((a, b) => a.kind.localeCompare(b.kind))
+          : [],
+
+        yourDrawnTile:
+          this.currentTurnSeat === seat && this.turnDrawnTile
+            ? {
+                id: this.turnDrawnTile.id,
+                kind: this.turnDrawnTile.kind,
+              }
+            : null,
         // 実際にテンパイになる場合のみtrue(サーバー側で判定した正式な値)
         canRiichi: isMyTurnNow ? this.computeCanRiichi(viewSeat) : false,
       }));
