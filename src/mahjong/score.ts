@@ -87,7 +87,21 @@ export function computeHan(
   }
 
   // 単語そのものの飜数
-  for (const w of words) {
+  // 長い単語に完全に含まれている短い単語は無効化する。
+  // 例:
+  //   りんご
+  //   でけえりんご
+  // の場合、「りんご」は加算しない。
+  const activeWords = words.filter((word, index) => {
+    return !words.some((other, otherIndex) => {
+      if (index === otherIndex) return false;
+      if (other.length <= word.length) return false;
+
+      return other.includes(word);
+    });
+  });
+
+  for (const w of activeWords) {
     const h = hanForWord(w, dict);
 
     if (h === 'y') {
