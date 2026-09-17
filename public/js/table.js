@@ -332,7 +332,22 @@ function tileHtml(kind, selected, selectable, small, idx, isDrawn, tileId) {
        draggable="true"`
     : '';
 
-  return `<div class="${cls.join(' ')}" ${dataAttrs}>${kind || ''}</div>`;
+  /*
+   * 牌1枚を6面の3Dオブジェクトとして生成する。
+   *
+   * .tile-front は既存の .tile をそのまま利用するため、
+   * クリック・ドラッグ・選択などの既存処理は変更しない。
+   */
+  return `
+    <div class="tile3d">
+      <div class="${cls.join(' ')} tile-front" ${dataAttrs}>${kind || ''}</div>
+      <div class="tile-face tile-back"></div>
+      <div class="tile-face tile-left"></div>
+      <div class="tile-face tile-right"></div>
+      <div class="tile-face tile-top"></div>
+      <div class="tile-face tile-bottom"></div>
+    </div>
+  `;
 }
 
 // 王牌(嶺上牌を除く10枚)を卓の外に表示する。

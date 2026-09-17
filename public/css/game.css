@@ -1671,3 +1671,372 @@ html, body { height: 100%; overflow: hidden; }
 .seat.bottom .tile.drawn-tile {
   margin-left: 14px;
 }
+
+/* =========================================================
+   6面立体牌
+   ========================================================= */
+
+:root {
+  --tile-depth: 6px;
+
+  /* 牌の裏 */
+  --tile-back: #315c56;
+
+  /* 牌の側面 */
+  --tile-side-light: #eee5ce;
+  --tile-side-mid: #b8aa88;
+  --tile-side-dark: #746a53;
+}
+
+
+/* =========================================================
+   牌1枚の3D本体
+   ========================================================= */
+
+.tile3d {
+  position: relative;
+
+  flex: 0 0 auto;
+
+  width: var(--tile-w);
+  height: var(--river-tile-h);
+
+  box-sizing: border-box;
+
+  transform-style: preserve-3d;
+
+  overflow: visible;
+}
+
+
+/* =========================================================
+   6面共通
+   ========================================================= */
+
+.tile3d > .tile-face,
+.tile3d > .tile-front {
+  position: absolute;
+
+  left: 0;
+  top: 0;
+
+  box-sizing: border-box;
+
+  transform-style: preserve-3d;
+
+  backface-visibility: hidden;
+}
+
+
+/* =========================================================
+   表面
+   ========================================================= */
+
+.tile3d > .tile-front {
+  width: 100%;
+  height: 100%;
+
+  margin: 0;
+
+  transform:
+    translateZ(calc(var(--tile-depth) / 2))
+    !important;
+
+  z-index: 6;
+}
+
+
+/* =========================================================
+   裏面
+   ========================================================= */
+
+.tile3d > .tile-back {
+  width: 100%;
+  height: 100%;
+
+  border: 1px solid #203f3a;
+  border-radius: 5px;
+
+  background:
+    linear-gradient(
+      135deg,
+      rgba(255,255,255,.18),
+      transparent 38%
+    ),
+    linear-gradient(
+      180deg,
+      #527a73 0%,
+      var(--tile-back) 52%,
+      #1f403b 100%
+    );
+
+  transform:
+    translateZ(calc(var(--tile-depth) / -2))
+    rotateY(180deg);
+}
+
+
+/* =========================================================
+   左右側面
+   ========================================================= */
+
+.tile3d > .tile-left,
+.tile3d > .tile-right {
+  width: var(--tile-depth);
+  height: 100%;
+
+  border: 1px solid var(--tile-side-dark);
+
+  background:
+    linear-gradient(
+      180deg,
+      var(--tile-side-light) 0%,
+      var(--tile-side-mid) 55%,
+      var(--tile-side-dark) 100%
+    );
+}
+
+
+/* 左面 */
+
+.tile3d > .tile-left {
+  left: calc(var(--tile-depth) / -2);
+
+  transform:
+    rotateY(-90deg);
+
+  transform-origin:
+    right center;
+}
+
+
+/* 右面 */
+
+.tile3d > .tile-right {
+  left: calc(100% - var(--tile-depth) / 2);
+
+  transform:
+    rotateY(90deg);
+
+  transform-origin:
+    left center;
+}
+
+
+/* =========================================================
+   上下側面
+   ========================================================= */
+
+.tile3d > .tile-top,
+.tile3d > .tile-bottom {
+  width: 100%;
+  height: var(--tile-depth);
+
+  border: 1px solid var(--tile-side-dark);
+
+  background:
+    linear-gradient(
+      90deg,
+      var(--tile-side-light) 0%,
+      var(--tile-side-mid) 55%,
+      var(--tile-side-dark) 100%
+    );
+}
+
+
+/* 上面 */
+
+.tile3d > .tile-top {
+  top: calc(var(--tile-depth) / -2);
+
+  transform:
+    rotateX(90deg);
+
+  transform-origin:
+    center bottom;
+}
+
+
+/* 下面 */
+
+.tile3d > .tile-bottom {
+  top: calc(100% - var(--tile-depth) / 2);
+
+  transform:
+    rotateX(-90deg);
+
+  transform-origin:
+    center top;
+}
+
+
+/* =========================================================
+   表面の既存疑似要素は無効化
+   ========================================================= */
+
+.tile3d > .tile-front::before,
+.tile3d > .tile-front::after {
+  display: none;
+}
+
+
+/* =========================================================
+   裏向き牌
+   ========================================================= */
+
+.tile3d > .tile-front.back {
+  visibility: hidden;
+}
+
+
+/* =========================================================
+   自分の手牌・河
+   ========================================================= */
+
+.seat.bottom .tile3d,
+.river .tile3d,
+.dead-wall-tiles .tile3d {
+  transform:
+    translateZ(3px);
+
+  transform-origin:
+    center center;
+}
+
+
+/* =========================================================
+   自分の手牌
+   今までのサイズ感を維持
+   ========================================================= */
+
+.seat.bottom .tile3d {
+  width: 42px;
+  height: 58px;
+}
+
+.seat.bottom .tile3d > .tile-front {
+  width: 100%;
+  height: 100%;
+}
+
+
+/* =========================================================
+   河・鳴き・王牌
+   ========================================================= */
+
+.river .tile3d,
+.meld-row .tile3d {
+  width: var(--tile-w);
+  height: var(--river-tile-h);
+}
+
+
+/* =========================================================
+   他家の手牌
+   「卓上に寝ている牌」ではなく
+   「卓面から立っている牌」にする
+   ========================================================= */
+
+/* =========================================================
+   他家の手牌
+   ========================================================= */
+
+/*
+ * 座席そのものの向きは既存CSSに任せる。
+ * tile3d自体は回転させない。
+ *
+ * これが重要。
+ * 親要素(.seat)の座席方向と、牌自身の立体化を分離する。
+ */
+
+.seat.top .tile3d,
+.seat.left .tile3d,
+.seat.right .tile3d {
+  transform: translateZ(3px);
+  transform-origin: center bottom;
+
+  filter:
+    drop-shadow(
+      2px 5px 4px rgba(0,0,0,.36)
+    );
+}
+
+/* =========================================================
+   他家の牌面
+   ========================================================= */
+
+.seat.top .tile3d > .tile-front,
+.seat.left .tile3d > .tile-front,
+.seat.right .tile3d > .tile-front {
+  transform:
+    translateZ(calc(var(--tile-depth) / 2))
+    !important;
+}
+
+
+/* =========================================================
+   他家の距離感
+   ========================================================= */
+
+.seat.top .tile3d {
+  filter:
+    brightness(.94)
+    drop-shadow(
+      2px 6px 5px rgba(0,0,0,.40)
+    );
+}
+
+.seat.left .tile3d,
+.seat.right .tile3d {
+  filter:
+    brightness(.97)
+    drop-shadow(
+      2px 6px 5px rgba(0,0,0,.38)
+    );
+}
+
+
+/* =========================================================
+   ツモ牌
+   ========================================================= */
+
+.seat.bottom .tile3d:has(.tile-front.drawn-tile) {
+  margin-left: 14px;
+}
+
+
+/* =========================================================
+   選択牌
+   ========================================================= */
+
+.seat.bottom .tile3d:has(.tile-front.selected) {
+  transform:
+    translateY(-11px)
+    translateZ(14px);
+}
+
+
+/* =========================================================
+   河のレイヤー
+   ========================================================= */
+
+.compass {
+  z-index: 20 !important;
+}
+
+.river {
+  z-index: 30 !important;
+}
+
+.seat {
+  z-index: 40 !important;
+}
+
+.player-tag {
+  z-index: 50 !important;
+}
+
+.river .tile3d {
+  position: relative;
+  z-index: 31;
+}
