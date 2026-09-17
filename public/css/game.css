@@ -340,3 +340,428 @@ html, body { height: 100%; overflow: hidden; }
   font-size: 10px;
   color: var(--gold-bright);
 }
+
+/* =========================================================
+   立体牌・立体卓デザイン
+   3Dエンジン不使用 / 既存HTML・牌文字をそのまま利用
+   ========================================================= */
+
+:root {
+  --tile-depth: 5px;
+  --tile-face-top: #fffdf7;
+  --tile-face-bottom: #e9dfc7;
+  --tile-edge-light: #fffefa;
+  --tile-edge-mid: #cbbd98;
+  --tile-edge-dark: #95886b;
+  --tile-shadow: rgba(0, 0, 0, .42);
+}
+
+/* ---------- 卓そのもの ---------- */
+
+.table-wrap {
+  width: min(92vw, 92vh, 900px);
+  height: min(92vw, 92vh, 900px);
+
+  border: 12px solid #4b351d;
+  border-radius: 28px;
+
+  background:
+    radial-gradient(
+      ellipse at 50% 45%,
+      #14503f 0%,
+      #0d3a2f 48%,
+      #08271f 100%
+    );
+
+  box-shadow:
+    0 20px 45px rgba(0, 0, 0, .62),
+    0 7px 0 #2b1d10,
+    inset 0 0 0 2px rgba(244, 214, 145, .22),
+    inset 0 0 35px rgba(0, 0, 0, .42),
+    inset 0 18px 25px rgba(255, 255, 255, .025);
+
+  perspective: 1000px;
+}
+
+/* 卓の内側の木枠 */
+.table-wrap::before {
+  content: "";
+  position: absolute;
+  inset: 9px;
+  border-radius: 18px;
+  border: 2px solid rgba(232, 196, 117, .20);
+  box-shadow:
+    inset 0 0 25px rgba(0, 0, 0, .26),
+    0 0 0 1px rgba(0, 0, 0, .18);
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* ---------- 牌共通 ---------- */
+
+.tile {
+  position: relative;
+  isolation: isolate;
+  overflow: visible;
+
+  border: 1px solid var(--tile-edge-mid);
+  border-radius: 5px 5px 4px 4px;
+
+  background:
+    linear-gradient(
+      135deg,
+      rgba(255,255,255,.82) 0%,
+      rgba(255,255,255,.18) 23%,
+      rgba(255,255,255,0) 45%
+    ),
+    linear-gradient(
+      180deg,
+      var(--tile-face-top) 0%,
+      #f8f1df 52%,
+      var(--tile-face-bottom) 100%
+    );
+
+  color: #27324a;
+
+  box-shadow:
+    inset 1px 1px 0 rgba(255,255,255,.95),
+    inset -1px -2px 0 rgba(110,95,66,.20),
+    0 1px 0 #b5a984,
+    1px 3px 0 #a39575,
+    2px 5px 0 #8a7e63,
+    4px 7px 6px var(--tile-shadow);
+
+  transform-style: preserve-3d;
+  transition:
+    transform .12s ease,
+    box-shadow .12s ease,
+    filter .12s ease;
+
+  z-index: 2;
+}
+
+/*
+ * 右側面
+ * 牌の厚みを見せるための立体面
+ */
+.tile::before {
+  content: "";
+  position: absolute;
+  pointer-events: none;
+
+  top: 3px;
+  right: calc(var(--tile-depth) * -1);
+
+  width: var(--tile-depth);
+  height: calc(100% - 6px);
+
+  border-radius: 0 3px 3px 0;
+
+  background:
+    linear-gradient(
+      90deg,
+      #d0c19b 0%,
+      #9b8c6d 100%
+    );
+
+  border-top: 1px solid rgba(255,255,255,.42);
+  border-right: 1px solid #756a53;
+  border-bottom: 1px solid #756a53;
+
+  transform-origin: left center;
+  transform: skewY(-10deg);
+
+  box-shadow:
+    2px 2px 3px rgba(0,0,0,.22);
+}
+
+/*
+ * 下側面
+ * 牌の底面を表現
+ */
+.tile::after {
+  content: "";
+  position: absolute;
+  pointer-events: none;
+
+  left: 3px;
+  bottom: calc(var(--tile-depth) * -1);
+
+  width: calc(100% - 7px);
+  height: var(--tile-depth);
+
+  border-radius: 0 0 3px 3px;
+
+  background:
+    linear-gradient(
+      180deg,
+      #beb18e 0%,
+      #81765e 100%
+    );
+
+  border-left: 1px solid rgba(255,255,255,.18);
+  border-bottom: 1px solid #665d4b;
+
+  transform-origin: top center;
+  transform: skewX(-10deg);
+
+  box-shadow:
+    2px 3px 4px rgba(0,0,0,.25);
+}
+
+/* ---------- 牌裏 ---------- */
+
+.tile.back {
+  color: transparent;
+
+  background:
+    linear-gradient(
+      135deg,
+      rgba(255,255,255,.14),
+      transparent 30%
+    ),
+    repeating-linear-gradient(
+      45deg,
+      #263b60 0px,
+      #263b60 3px,
+      #30466f 3px,
+      #30466f 6px
+    );
+
+  border-color: #4c638c;
+
+  box-shadow:
+    inset 1px 1px 0 rgba(255,255,255,.15),
+    inset -1px -2px 0 rgba(0,0,0,.22),
+    0 1px 0 #435879,
+    1px 3px 0 #374966,
+    2px 5px 0 #2a3852,
+    4px 7px 6px rgba(0,0,0,.46);
+}
+
+.tile.back::before {
+  background:
+    linear-gradient(
+      90deg,
+      #34496b 0%,
+      #202e47 100%
+    );
+  border-color: #1d293d;
+}
+
+.tile.back::after {
+  background:
+    linear-gradient(
+      180deg,
+      #314461 0%,
+      #202d43 100%
+    );
+  border-color: #1a2538;
+}
+
+/* ---------- 小さい牌 ---------- */
+
+.tile.small {
+  --tile-depth: 4px;
+
+  border-radius: 4px 4px 3px 3px;
+
+  box-shadow:
+    inset 1px 1px 0 rgba(255,255,255,.9),
+    inset -1px -1px 0 rgba(100,85,60,.20),
+    0 1px 0 #b4a681,
+    1px 2px 0 #9d916f,
+    2px 4px 0 #81765d,
+    3px 5px 5px rgba(0,0,0,.38);
+}
+
+.tile.small::before {
+  top: 2px;
+  height: calc(100% - 4px);
+}
+
+.tile.small::after {
+  left: 2px;
+  width: calc(100% - 5px);
+}
+
+/* ---------- 選択中の牌 ---------- */
+
+.tile.selected {
+  transform: translateY(-11px) translateZ(5px);
+
+  box-shadow:
+    0 0 0 2px var(--gold-bright),
+    inset 1px 1px 0 rgba(255,255,255,.95),
+    inset -1px -2px 0 rgba(110,95,66,.18),
+    0 2px 0 #c0af80,
+    2px 5px 0 #988960,
+    4px 8px 8px rgba(0,0,0,.46),
+    0 0 16px rgba(243,215,138,.32);
+}
+
+/* ---------- ドラッグ中 ---------- */
+
+.tile.dragging {
+  opacity: .72;
+
+  transform:
+    translateY(-7px)
+    translateZ(8px)
+    rotateX(3deg);
+
+  filter: brightness(1.05);
+}
+
+/* ---------- ドロップ対象 ---------- */
+
+.tile.drop-target {
+  box-shadow:
+    0 0 0 2px var(--gold-bright),
+    0 0 12px rgba(243,215,138,.45),
+    2px 5px 0 #988960,
+    4px 8px 8px rgba(0,0,0,.42);
+}
+
+/* ---------- 捨て牌 ---------- */
+
+.tile.discarded {
+  filter: saturate(.95) brightness(.98);
+
+  box-shadow:
+    inset 1px 1px 0 rgba(255,255,255,.86),
+    inset -1px -1px 0 rgba(100,85,60,.18),
+    0 1px 0 #b4a681,
+    1px 2px 0 #a19370,
+    2px 4px 0 #82765d,
+    3px 5px 5px rgba(0,0,0,.34);
+}
+
+/* ---------- 鳴き牌 ---------- */
+
+.tile.meld {
+  transform: rotate(90deg) translateZ(1px);
+}
+
+/* ---------- ツモ牌の離れ ---------- */
+
+.tile.drawn-tile {
+  margin-left: 14px;
+}
+
+/* ---------- 河 ---------- */
+
+.river .tile {
+  position: relative;
+  z-index: 2;
+}
+
+/*
+ * 河の奥に置かれている感じを出すため、
+ * 1列ごとに軽く沈ませる。
+ */
+.river-block {
+  filter: drop-shadow(
+    0 4px 4px rgba(0,0,0,.16)
+  );
+}
+
+/* ---------- コンパス ---------- */
+
+.compass {
+  background:
+    radial-gradient(
+      circle at 45% 42%,
+      #233128 0%,
+      #101b16 53%,
+      #07100c 100%
+    );
+
+  border: 2px solid #7e6b43;
+  border-radius: 10px;
+
+  box-shadow:
+    0 8px 0 #17170f,
+    0 12px 18px rgba(0,0,0,.46),
+    inset 0 2px 0 rgba(255,255,255,.10),
+    inset 0 -4px 10px rgba(0,0,0,.48),
+    inset 0 0 0 1px rgba(217,180,106,.18);
+
+  transform-style: preserve-3d;
+}
+
+/* 中央部分 */
+.cell-center {
+  background:
+    radial-gradient(
+      circle at 50% 42%,
+      #101b15 0%,
+      #050906 72%
+    );
+
+  border-radius: 8px;
+
+  margin: 5px;
+
+  box-shadow:
+    inset 0 2px 3px rgba(0,0,0,.88),
+    inset 0 -1px 0 rgba(255,255,255,.05),
+    0 1px 0 rgba(217,180,106,.08);
+}
+
+/* 各方角 */
+.compass-cell:not(.cell-center) {
+  text-shadow:
+    0 2px 3px rgba(0,0,0,.72);
+
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.05),
+    inset 0 -3px 4px rgba(0,0,0,.16);
+}
+
+/* 東南西北の文字をほんの少し浮かせる */
+.compass-cell .wind {
+  transform: translateY(-1px);
+}
+
+/* 得点 */
+.compass-cell .score {
+  text-shadow: 0 1px 2px rgba(0,0,0,.75);
+}
+
+/* リーチ棒 */
+.riichi-stick {
+  height: 5px;
+  border-radius: 3px;
+
+  box-shadow:
+    0 1px 0 rgba(0,0,0,.55),
+    0 0 7px rgba(192,67,63,.55);
+
+  transform: translateY(1px);
+}
+
+/* ---------- 局・王牌の表示も少し立体化 ---------- */
+
+.round-info-large,
+.dead-wall-bar {
+  box-shadow:
+    0 4px 10px rgba(0,0,0,.28),
+    inset 0 1px 0 rgba(255,255,255,.05),
+    inset 0 -2px 4px rgba(0,0,0,.22);
+}
+
+.dead-wall-tiles {
+  filter: drop-shadow(
+    0 3px 3px rgba(0,0,0,.22)
+  );
+}
+
+/* ---------- 卓上の手牌を少し浮かせる ---------- */
+
+.hand-row,
+.meld-row {
+  filter: drop-shadow(
+    0 3px 3px rgba(0,0,0,.12)
+  );
+}
