@@ -134,8 +134,28 @@ export class GameRoom {
 
   async loadDict(): Promise<WordDef[]> {
     try {
+      // 現在のD1スキーマを確認する。
+      // 古いDBでは `note`、新しいDBでは `tag` の可能性がある。
+      const columns = await this.env.DB
+        .prepare('PRAGMA table_info(words)')
+        .all();
+
+      const columnNames = new Set(
+        (columns.results || []).map((row: any) => String(row.name))
+      );
+
+      let tagColumn = 'NULL';
+
+      if (columnNames.has('tag')) {
+        tagColumn = 'tag';
+      } else if (columnNames.has('note')) {
+        tagColumn = 'note';
+      }
+
       const res = await this.env.DB
-        .prepare('SELECT word, han, tag FROM words')
+        .prepare(
+          `SELECT word, han, ${tagColumn} AS tag FROM words`
+        )
         .all();
 
       return (res.results || []).map((row: any) => ({

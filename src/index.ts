@@ -51,9 +51,27 @@ async function getSession(request: Request, env: Env): Promise<{ userId: string;
 }
 
 async function loadDebugDict(env: Env): Promise<WordDef[]> {
-  const res = await env.DB.prepare(
-    'SELECT word, han, tag FROM words'
-  ).all();
+  const columns = await env.DB
+    .prepare('PRAGMA table_info(words)')
+    .all();
+
+  const columnNames = new Set(
+    (columns.results || []).map((row: any) => String(row.name))
+  );
+
+  let tagColumn = 'NULL';
+
+  if (columnNames.has('tag')) {
+    tagColumn = 'tag';
+  } else if (columnNames.has('note')) {
+    tagColumn = 'note';
+  }
+
+  const res = await env.DB
+    .prepare(
+      `SELECT word, han, ${tagColumn} AS tag FROM words`
+    )
+    .all();
 
   return (res.results || []).map((row: any) => ({
     word: String(row.word),
