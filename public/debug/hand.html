@@ -1,0 +1,878 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta
+    name="viewport"
+    content="width=device-width,initial-scale=1"
+  >
+
+  <title>下麻 手牌判定デバッグ</title>
+
+  <style>
+    :root {
+      font-family:
+        system-ui,
+        -apple-system,
+        BlinkMacSystemFont,
+        "Segoe UI",
+        sans-serif;
+
+      color-scheme: dark;
+    }
+
+    body {
+      margin: 0;
+      background: #111;
+      color: #eee;
+    }
+
+    main {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+
+    h1 {
+      margin: 0 0 8px;
+      font-size: 24px;
+    }
+
+    .sub {
+      color: #aaa;
+      margin-bottom: 18px;
+    }
+
+    .panel {
+      background: #1b1b1b;
+      border: 1px solid #333;
+      border-radius: 12px;
+      padding: 14px;
+      margin-bottom: 14px;
+    }
+
+    .panel h2 {
+      margin: 0 0 10px;
+      font-size: 17px;
+    }
+
+    .toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+    }
+
+    button {
+      font: inherit;
+    }
+
+    .action {
+      border: 1px solid #555;
+      background: #282828;
+      color: #fff;
+      border-radius: 8px;
+      padding: 7px 11px;
+      cursor: pointer;
+    }
+
+    .action:hover {
+      background: #333;
+    }
+
+    .info {
+      color: #aaa;
+      font-size: 13px;
+    }
+
+    #tileGrid {
+      display: grid;
+      grid-template-columns:
+        repeat(auto-fill, minmax(58px, 1fr));
+      gap: 6px;
+    }
+
+    .tileBtn {
+      position: relative;
+      min-height: 54px;
+      border: 1px solid #444;
+      background: #252525;
+      color: #fff;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+
+    .tileBtn:hover {
+      background: #313131;
+    }
+
+    .tileBtn .count {
+      position: absolute;
+      right: 4px;
+      top: 2px;
+      min-width: 16px;
+      height: 16px;
+      line-height: 16px;
+      border-radius: 8px;
+      background: #555;
+      font-size: 11px;
+    }
+
+    .tileBtn.has .count {
+      background: #7c5;
+      color: #111;
+    }
+
+    #hand {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 5px;
+      min-height: 66px;
+      align-items: center;
+    }
+
+    .handTile {
+      width: 44px;
+      height: 58px;
+      border: 1px solid #888;
+      border-radius: 6px;
+      background: #f3f0e8;
+      color: #111;
+      display: grid;
+      place-items: center;
+      font-size: 24px;
+      cursor: pointer;
+    }
+
+    .handTile:hover {
+      transform: translateY(-2px);
+    }
+
+    .badgeRow {
+      display: grid;
+      grid-template-columns:
+        repeat(auto-fit, minmax(145px, 1fr));
+      gap: 8px;
+    }
+
+    .badge {
+      border: 1px solid #333;
+      border-radius: 9px;
+      padding: 10px;
+      background: #151515;
+    }
+
+    .badge .label {
+      color: #999;
+      font-size: 12px;
+    }
+
+    .badge .value {
+      font-size: 18px;
+      margin-top: 3px;
+    }
+
+    .ok {
+      color: #9fd37d;
+    }
+
+    .ng {
+      color: #e58c8c;
+    }
+
+    .warn {
+      color: #e6c06d;
+    }
+
+    .mono {
+      font-family:
+        ui-monospace,
+        SFMono-Regular,
+        Menlo,
+        Consolas,
+        monospace;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+
+    th,
+    td {
+      border-bottom: 1px solid #333;
+      padding: 6px 7px;
+      text-align: left;
+    }
+
+    .empty {
+      color: #777;
+    }
+
+    @media (max-width: 700px) {
+      main {
+        padding: 12px;
+      }
+
+      #tileGrid {
+        grid-template-columns:
+          repeat(8, minmax(0, 1fr));
+      }
+
+      .tileBtn {
+        min-height: 46px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+<main>
+
+  <h1>下麻 手牌判定デバッグ</h1>
+
+  <div class="sub">
+    実戦画面とは独立して、現在のサーバー判定エンジンに
+    手牌を渡して確認します。
+  </div>
+
+  <section class="panel">
+    <h2>操作</h2>
+
+    <div class="toolbar">
+
+      <button class="action" id="clearBtn">
+        手牌をクリア
+      </button>
+
+      <button class="action" id="random13Btn">
+        ランダム13枚
+      </button>
+
+      <button class="action" id="random14Btn">
+        ランダム14枚
+      </button>
+
+      <span class="info">
+        牌をクリックで1枚追加。
+        下の手牌をクリックするとその1枚を削除。
+      </span>
+
+    </div>
+  </section>
+
+  <section class="panel">
+    <h2>
+      現在の手牌
+      <span id="handCount">0/14</span>
+    </h2>
+
+    <div id="hand" class="empty">
+      牌を追加してください
+    </div>
+  </section>
+
+  <section class="panel">
+    <h2>判定結果</h2>
+
+    <div class="badgeRow">
+
+      <div class="badge">
+        <div class="label">牌数</div>
+        <div id="lengthResult" class="value">-</div>
+      </div>
+
+      <div class="badge">
+        <div class="label">和了</div>
+        <div id="winResult" class="value">-</div>
+      </div>
+
+      <div class="badge">
+        <div class="label">テンパイ</div>
+        <div id="tenpaiResult" class="value">-</div>
+      </div>
+
+      <div class="badge">
+        <div class="label">リーチ可能</div>
+        <div id="riichiResult" class="value">-</div>
+      </div>
+
+      <div class="badge">
+        <div class="label">辞書登録数</div>
+        <div id="dictResult" class="value">-</div>
+      </div>
+
+      <div class="badge">
+        <div class="label">牌種類数</div>
+        <div id="kindResult" class="value">-</div>
+      </div>
+
+    </div>
+
+    <div style="margin-top:12px">
+      <div id="status" class="info">
+        待機中
+      </div>
+    </div>
+  </section>
+
+  <section class="panel">
+    <h2>待ち牌 / リーチ打牌候補</h2>
+
+    <div id="waits" class="mono empty">
+      -
+    </div>
+  </section>
+
+  <section class="panel">
+    <h2>和了分解</h2>
+
+    <div id="decompositions" class="mono empty">
+      -
+    </div>
+  </section>
+
+  <section class="panel">
+    <h2>辞書</h2>
+
+    <div id="dictionarySummary" class="info">
+      -
+    </div>
+
+    <details style="margin-top:8px">
+
+      <summary>
+        辞書の内容を表示
+      </summary>
+
+      <div
+        id="dictionary"
+        style="margin-top:8px"
+      ></div>
+
+    </details>
+  </section>
+
+  <section class="panel">
+    <h2>牌一覧</h2>
+    <div id="tileGrid"></div>
+  </section>
+
+</main>
+
+<script>
+const SEION = [
+  'あ','い','う','え','お',
+  'か','き','く','け','こ',
+  'さ','し','す','せ','そ',
+  'た','ち','つ','て','と',
+  'な','に','ぬ','ね','の',
+  'は','ひ','ふ','へ','ほ',
+  'ま','み','む','め','も',
+  'や','ゆ','よ',
+  'ら','り','る','れ','ろ',
+  'わ','を','ん'
+];
+
+const DAKUTEN = [
+  'が','ぎ','ぐ','げ','ご',
+  'ざ','じ','ず','ぜ','ぞ',
+  'だ','ぢ','づ','で','ど',
+  'ば','び','ぶ','べ','ぼ',
+  'ぱ','ぴ','ぷ','ぺ','ぽ',
+  'ゔ'
+];
+
+const SMALL = [
+  'ぁ','ぃ','ぅ','ぇ','ぉ',
+  'っ','ゃ','ゅ','ょ'
+];
+
+const CHOON = ['ー'];
+
+const ALL_TILES = [
+  ...SEION,
+  ...DAKUTEN,
+  ...SMALL,
+  ...CHOON
+];
+
+let hand = [];
+let timer = null;
+
+const $ = (id) =>
+  document.getElementById(id);
+
+function setResult(el, value, cls = '') {
+  el.textContent = value;
+  el.className = 'value ' + cls;
+}
+
+function renderHand() {
+  $('handCount').textContent =
+    `${hand.length}/14`;
+
+  const root = $('hand');
+
+  if (!hand.length) {
+    root.className = 'empty';
+    root.textContent =
+      '牌を追加してください';
+    return;
+  }
+
+  root.className = '';
+
+  root.innerHTML =
+    hand.map((kind, index) =>
+      `
+      <button
+        class="handTile"
+        title="クリックで削除"
+        data-index="${index}"
+      >
+        ${kind}
+      </button>
+      `
+    ).join('');
+
+  root
+    .querySelectorAll('[data-index]')
+    .forEach((btn) => {
+
+      btn.addEventListener('click', () => {
+
+        hand.splice(
+          Number(btn.dataset.index),
+          1
+        );
+
+        renderHand();
+        renderTiles();
+        scheduleCheck();
+      });
+
+    });
+}
+
+function renderTiles() {
+
+  $('tileGrid').innerHTML =
+    ALL_TILES.map((kind) => {
+
+      const count =
+        hand.filter((x) => x === kind)
+          .length;
+
+      return `
+        <button
+          class="tileBtn ${count ? 'has' : ''}"
+          data-kind="${kind}"
+        >
+          ${kind}
+          <span class="count">
+            ${count}
+          </span>
+        </button>
+      `;
+
+    }).join('');
+
+  $('tileGrid')
+    .querySelectorAll('[data-kind]')
+    .forEach((btn) => {
+
+      btn.addEventListener('click', () => {
+
+        if (hand.length >= 14) {
+          return;
+        }
+
+        hand.push(btn.dataset.kind);
+
+        renderHand();
+        renderTiles();
+        scheduleCheck();
+      });
+
+    });
+}
+
+function randomHand(length) {
+
+  hand = [];
+
+  for (let i = 0; i < length; i++) {
+
+    hand.push(
+      ALL_TILES[
+        Math.floor(
+          Math.random() *
+          ALL_TILES.length
+        )
+      ]
+    );
+
+  }
+
+  renderHand();
+  renderTiles();
+  scheduleCheck();
+}
+
+function resetResults() {
+
+  setResult(
+    $('lengthResult'),
+    `${hand.length}枚`
+  );
+
+  setResult(
+    $('winResult'),
+    '-'
+  );
+
+  setResult(
+    $('tenpaiResult'),
+    '-'
+  );
+
+  setResult(
+    $('riichiResult'),
+    '-'
+  );
+
+  setResult(
+    $('dictResult'),
+    '-'
+  );
+
+  setResult(
+    $('kindResult'),
+    '-'
+  );
+
+  $('waits').textContent = '-';
+  $('waits').className =
+    'mono empty';
+
+  $('decompositions').textContent = '-';
+  $('decompositions').className =
+    'mono empty';
+
+  $('dictionarySummary').textContent = '-';
+
+  $('dictionary').innerHTML = '';
+}
+
+function scheduleCheck() {
+
+  clearTimeout(timer);
+
+  timer = setTimeout(
+    check,
+    180
+  );
+}
+
+async function check() {
+
+  resetResults();
+
+  if (
+    hand.length !== 13 &&
+    hand.length !== 14
+  ) {
+
+    $('status').textContent =
+      '13枚ならテンパイ判定、14枚なら和了・リーチ判定を行います。';
+
+    $('status').className =
+      'info';
+
+    return;
+  }
+
+  $('status').textContent =
+    '判定中…';
+
+  $('status').className =
+    'info';
+
+  try {
+
+    const res = await fetch(
+      '/api/debug/hand-check',
+      {
+        method: 'POST',
+        credentials: 'include',
+        headers: {
+          'Content-Type':
+            'application/json'
+        },
+        body: JSON.stringify({
+          hand
+        }),
+      }
+    );
+
+    const data =
+      await res.json();
+
+    if (!res.ok) {
+      throw new Error(
+        data.error ||
+        `HTTP ${res.status}`
+      );
+    }
+
+    setResult(
+      $('lengthResult'),
+      `${data.handLength}枚`
+    );
+
+    setResult(
+      $('dictResult'),
+      `${data.dictionaryCount}語`,
+      data.dictionaryCount > 0
+        ? 'ok'
+        : 'ng'
+    );
+
+    setResult(
+      $('kindResult'),
+      `${data.tileKindCount}種類`,
+      data.tileKindCount === 82
+        ? 'ok'
+        : 'warn'
+    );
+
+    if (hand.length === 13) {
+
+      setResult(
+        $('winResult'),
+        '-'
+      );
+
+      setResult(
+        $('tenpaiResult'),
+        data.isTenpai
+          ? '○'
+          : '×',
+        data.isTenpai
+          ? 'ok'
+          : 'ng'
+      );
+
+      setResult(
+        $('riichiResult'),
+        '-'
+      );
+
+      $('waits').textContent =
+        data.waits.length
+          ? data.waits.join('　')
+          : '待ちなし';
+
+      $('waits').className =
+        'mono ' +
+        (
+          data.waits.length
+            ? 'ok'
+            : 'ng'
+        );
+
+      $('decompositions').textContent =
+        '-';
+
+    } else {
+
+      setResult(
+        $('winResult'),
+        data.canWin
+          ? '○'
+          : '×',
+        data.canWin
+          ? 'ok'
+          : 'ng'
+      );
+
+      setResult(
+        $('tenpaiResult'),
+        '-'
+      );
+
+      setResult(
+        $('riichiResult'),
+        data.canRiichi
+          ? '○'
+          : '×',
+        data.canRiichi
+          ? 'ok'
+          : 'ng'
+      );
+
+      $('waits').textContent =
+        data.riichiDiscards.length
+          ? `リーチ打牌候補: ${data.riichiDiscards.join('　')}`
+          : 'リーチ可能な打牌なし';
+
+      $('waits').className =
+        'mono ' +
+        (
+          data.riichiDiscards.length
+            ? 'ok'
+            : 'ng'
+        );
+
+      if (data.decompositions.length) {
+
+        $('decompositions').innerHTML =
+          data.decompositions
+            .map((d, i) =>
+              `${i + 1}. ${d.words.join(' ｜ ')}`
+            )
+            .join('<br>');
+
+        $('decompositions').className =
+          'mono';
+
+      } else {
+
+        $('decompositions').textContent =
+          '分解できません';
+
+        $('decompositions').className =
+          'mono ng';
+      }
+    }
+
+    $('dictionarySummary').textContent =
+      `DBから ${data.dictionaryCount} 語を読み込みました。`;
+
+    if (data.dictionaryCount === 0) {
+
+      $('dictionarySummary').innerHTML =
+        `
+        <span class="ng">
+          辞書が0件です。
+          D1の words テーブル読み込みを疑ってください。
+        </span>
+        `;
+    }
+
+    $('dictionary').innerHTML =
+      data.dictionary.length
+
+        ? `
+          <table>
+            <thead>
+              <tr>
+                <th>word</th>
+                <th>han</th>
+                <th>tag</th>
+              </tr>
+            </thead>
+
+            <tbody>
+
+              ${
+                data.dictionary
+                  .map(d =>
+                    `
+                    <tr>
+                      <td>
+                        ${escapeHtml(d.word)}
+                      </td>
+
+                      <td>
+                        ${escapeHtml(String(d.han))}
+                      </td>
+
+                      <td>
+                        ${escapeHtml(
+                          (d.tag || []).join(' ')
+                        )}
+                      </td>
+                    </tr>
+                    `
+                  )
+                  .join('')
+              }
+
+            </tbody>
+          </table>
+          `
+
+        : `
+          <span class="ng">
+            辞書なし
+          </span>
+          `;
+
+    $('status').textContent =
+      '判定完了';
+
+    $('status').className =
+      'ok';
+
+  } catch (err) {
+
+    $('status').textContent =
+      `エラー: ${err.message || err}`;
+
+    $('status').className =
+      'ng';
+  }
+}
+
+function escapeHtml(value) {
+
+  return value.replace(
+    /[&<>"']/g,
+    (ch) => ({
+      '&': '&amp;',
+      '<': '&lt;',
+      '>': '&gt;',
+      '"': '&quot;',
+      "'": '&#39;'
+    })[ch]
+  );
+}
+
+$('clearBtn')
+  .addEventListener(
+    'click',
+    () => {
+
+      hand = [];
+
+      renderHand();
+      renderTiles();
+      scheduleCheck();
+    }
+  );
+
+$('random13Btn')
+  .addEventListener(
+    'click',
+    () => randomHand(13)
+  );
+
+$('random14Btn')
+  .addEventListener(
+    'click',
+    () => randomHand(14)
+  );
+
+renderHand();
+renderTiles();
+resetResults();
+
+$('status').textContent =
+  '準備完了';
+</script>
+
+</body>
+</html>

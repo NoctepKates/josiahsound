@@ -3,6 +3,15 @@ import bcrypt from 'bcryptjs';
 import { GameRoom } from './GameRoom';
 import { Lobby } from './Lobby';
 
+import { ALL_TILE_KINDS } from './mahjong/tiles';
+import {
+  canDeclareRiichiHand,
+  canWin,
+  findAllDecompositions,
+  isTenpai,
+  type WordDef,
+} from './mahjong/words';
+
 export { GameRoom, Lobby };
 
 export interface Env {
@@ -39,6 +48,20 @@ async function getSession(request: Request, env: Env): Promise<{ userId: string;
      WHERE s.token = ? AND s.expires_at > ?`
   ).bind(token, Math.floor(Date.now() / 1000)).first<{ userId: string; username: string }>();
   return row || null;
+}
+
+async function loadDebugDict(env: Env): Promise<WordDef[]> {
+  const res = await env.DB.prepare(
+    'SELECT word, han, tag FROM words'
+  ).all();
+
+  return (res.results || []).map((row: any) => ({
+    word: String(row.word),
+    han: row.han === 'y' ? 'y' : Number(row.han),
+    tag: typeof row.tag === 'string'
+      ? row.tag.split(/\s+/).filter(Boolean)
+      : [],
+  }));
 }
 
 function json(data: any, init: ResponseInit = {}): Response {
@@ -133,6 +156,116 @@ export default {
         const session = await getSession(request, env);
         if (!session) return json({ error: 'unauthorized' }, { status: 401 });
         return json({ user: session });
+      }
+
+      // ---------- 一時デバッグ: 手牌判定 ----------
+      if (
+        path === '/api/debug/hand-check' &&
+        request.method === 'POST'
+      ) {
+        const session = await getSession(request, env);
+
+        if (!session) {
+          return json(
+            { error: 'unauthorized' },
+            { status: 401 }
+          );
+        }
+
+        const body = await request.json() as {
+          hand?: unknown;
+        };
+
+        if (
+          !Array.isArray(body.hand) ||
+          body.hand.some((x) => typeof x !== 'string')
+        ) {
+          return json(
+            { error: 'hand は文字列配列で指定してください' },
+            { status: 400 }
+          );
+        }
+
+        const hand = body.hand as string[];
+
+        if (hand.length > 14) {
+          return json(
+            { error: '手牌は14枚までです' },
+            { status: 400 }
+          );
+        }
+
+        const invalidKinds = hand.filter(
+          (kind) => !ALL_TILE_KINDS.includes(kind)
+        );
+
+        if (invalidKinds.length > 0) {
+          return json(
+            {
+              error:
+                `未知の牌: ${[...new Set(invalidKinds)].join('、')}`,
+            },
+            { status: 400 }
+          );
+        }
+
+        const dict = await loadDebugDict(env);
+
+        // 14枚なら和了形を実際に探索
+        const decompositions14 =
+          hand.length === 14
+            ? findAllDecompositions(hand, dict, 100)
+            : [];
+
+        // 13枚なら全牌種を試して待ちを求める
+        const waits =
+          hand.length === 13
+            ? ALL_TILE_KINDS.filter((kind) =>
+                canWin([...hand, kind], dict)
+              )
+            : [];
+
+        // 14枚なら各打牌候補についてテンパイになるか調べる
+        const riichiDiscards =
+          hand.length === 14
+            ? [...new Set(hand)].filter((discardKind) => {
+                const rest = [...hand];
+                const index = rest.indexOf(discardKind);
+
+                if (index < 0) return false;
+
+                rest.splice(index, 1);
+
+                return isTenpai(rest, dict);
+              })
+            : [];
+
+        return json({
+          ok: true,
+
+          dictionaryCount: dict.length,
+          tileKindCount: ALL_TILE_KINDS.length,
+          handLength: hand.length,
+
+          canWin:
+            hand.length === 14 &&
+            decompositions14.length > 0,
+
+          isTenpai:
+            hand.length === 13 &&
+            waits.length > 0,
+
+          canRiichi:
+            hand.length === 14 &&
+            canDeclareRiichiHand(hand, dict),
+
+          decompositions: decompositions14,
+          waits,
+          riichiDiscards,
+
+          // デバッグ用に実際にDBから読んだ辞書も返す
+          dictionary: dict,
+        });
       }
 
       // ---------- フレンド ----------
