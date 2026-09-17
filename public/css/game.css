@@ -765,3 +765,479 @@ html, body { height: 100%; overflow: hidden; }
     0 3px 3px rgba(0,0,0,.12)
   );
 }
+
+/* =========================================================
+   着席視点・遠近法
+   ========================================================= */
+
+/*
+ * 卓全体を「手前の席から見下ろす」。
+ *
+ * perspective:
+ *   遠くにあるものほど小さくなる。
+ *
+ * rotateX:
+ *   真上からではなく、手前から奥を見る視点になる。
+ */
+.table-wrap {
+  width: min(94vw, 94vh, 920px);
+  height: min(94vw, 94vh, 920px);
+
+  transform:
+    perspective(1350px)
+    rotateX(42deg);
+
+  transform-origin: 50% 58%;
+
+  /*
+   * 3Dの子要素をそのまま維持する。
+   */
+  transform-style: preserve-3d;
+
+  /*
+   * 牌の影などが卓外へ出ても切らない。
+   */
+  overflow: visible;
+
+  /*
+   * 画面上で卓が少し浮いているようにする。
+   */
+  box-shadow:
+    0 32px 55px rgba(0,0,0,.62),
+    0 11px 0 #2b1d10,
+    inset 0 0 55px rgba(0,0,0,.55),
+    inset 0 0 0 2px rgba(244,214,145,.20);
+}
+
+
+/* =========================================================
+   レイヤー
+   ========================================================= */
+
+/*
+ * 河はコンパスより上。
+ *
+ * 旧:
+ *   compass 6
+ *   river   3
+ *
+ * 新:
+ *   river   8
+ *   compass 6
+ *   hand   10
+ */
+.compass {
+  z-index: 6;
+}
+
+.river {
+  z-index: 8;
+  transform-style: preserve-3d;
+}
+
+.seat {
+  z-index: 10;
+  transform-style: preserve-3d;
+}
+
+.player-tag {
+  z-index: 20;
+}
+
+
+/* =========================================================
+   牌そのもの
+   ========================================================= */
+
+.tile {
+  transform-style: preserve-3d;
+
+  /*
+   * 卓面からほんの少し浮かせる。
+   */
+  transform:
+    translateZ(5px);
+
+  /*
+   * 卓上に置かれた牌らしい影。
+   */
+  box-shadow:
+    inset 1px 1px 0 rgba(255,255,255,.96),
+    inset -1px -2px 0 rgba(110,95,66,.20),
+
+    0 1px 0 #b5a984,
+    1px 3px 0 #a39575,
+    2px 5px 0 #8a7e63,
+
+    5px 9px 9px rgba(0,0,0,.42);
+}
+
+
+/*
+ * 牌上面に薄い光沢。
+ *
+ * 実際の牌のプラスチックっぽい反射を
+ * かなり弱く再現する。
+ */
+.tile {
+  background:
+    linear-gradient(
+      115deg,
+      rgba(255,255,255,.82) 0%,
+      rgba(255,255,255,.30) 15%,
+      rgba(255,255,255,0) 36%
+    ),
+    linear-gradient(
+      180deg,
+      #fffef9 0%,
+      #f8f1df 46%,
+      #e6dbc0 100%
+    );
+}
+
+
+/* =========================================================
+   自分の手牌
+   ========================================================= */
+
+/*
+ * 手前なので一番大きく見える。
+ */
+.seat.bottom {
+  transform:
+    translateZ(18px);
+}
+
+
+/*
+ * 自分の牌を少し手前へ浮かせる。
+ */
+.seat.bottom .tile {
+  transform:
+    translateZ(8px);
+}
+
+
+/* =========================================================
+   対面
+   ========================================================= */
+
+/*
+ * 一番遠い席。
+ *
+ * 卓そのものの遠近法に加えて、
+ * ほんの少し縮小する。
+ */
+.seat.top {
+  transform:
+    translateX(-50%)
+    rotate(180deg)
+    translateZ(14px)
+    scale(.82);
+}
+
+.seat.top .tile {
+  transform:
+    translateZ(6px);
+}
+
+
+/* =========================================================
+   右席
+   ========================================================= */
+
+.seat.right {
+  transform:
+    translate(50%, -50%)
+    rotate(-90deg)
+    translateZ(15px)
+    scale(.88);
+
+  transform-origin:
+    center center;
+}
+
+.seat.right .tile {
+  transform:
+    translateZ(6px);
+}
+
+
+/* =========================================================
+   左席
+   ========================================================= */
+
+.seat.left {
+  transform:
+    translate(-50%, -50%)
+    rotate(90deg)
+    translateZ(15px)
+    scale(.88);
+
+  transform-origin:
+    center center;
+}
+
+.seat.left .tile {
+  transform:
+    translateZ(6px);
+}
+
+
+/* =========================================================
+   手牌の影
+   ========================================================= */
+
+.hand-row,
+.meld-row {
+  filter:
+    drop-shadow(0 6px 5px rgba(0,0,0,.24));
+}
+
+
+/*
+ * 他家の手牌は「立っている」感じを強める。
+ *
+ * 牌そのものを少し卓から浮かせ、
+ * 下側へ濃い影を落とす。
+ */
+.seat.top .hand-row,
+.seat.left .hand-row,
+.seat.right .hand-row {
+  filter:
+    drop-shadow(0 8px 5px rgba(0,0,0,.30));
+}
+
+
+/* =========================================================
+   河
+   ========================================================= */
+
+/*
+ * 自分の河
+ * 一番手前なので一番大きい。
+ */
+.river.river-bottom {
+  transform:
+    translateX(-50%)
+    scale(1.00);
+
+  transform-origin:
+    center center;
+
+  z-index: 8;
+}
+
+
+/*
+ * 対面の河
+ * 一番遠いので小さくする。
+ */
+.river.river-top {
+  transform:
+    translateX(-50%)
+    rotate(180deg)
+    scale(.84);
+
+  transform-origin:
+    center center;
+
+  z-index: 8;
+}
+
+
+/*
+ * 左右の河
+ */
+.river.river-right {
+  transform:
+    rotate(-90deg)
+    scale(.90);
+
+  transform-origin:
+    0 0;
+
+  z-index: 8;
+}
+
+.river.river-left {
+  transform:
+    rotate(90deg)
+    scale(.90);
+
+  transform-origin:
+    0 0;
+
+  z-index: 8;
+}
+
+
+/*
+ * 河の牌も卓面から少し浮く。
+ */
+.river .tile {
+  transform:
+    translateZ(4px);
+}
+
+
+/* =========================================================
+   河の奥行き表現
+   ========================================================= */
+
+/*
+ * 河全体に卓面からの影。
+ */
+.river-block {
+  filter:
+    drop-shadow(0 5px 5px rgba(0,0,0,.25));
+}
+
+
+/*
+ * 遠い河ほど少し暗くして、
+ * 空間的な距離感を出す。
+ */
+.river.river-top {
+  filter:
+    brightness(.92)
+    drop-shadow(0 4px 5px rgba(0,0,0,.28));
+}
+
+.river.river-left,
+.river.river-right {
+  filter:
+    brightness(.96)
+    drop-shadow(0 5px 5px rgba(0,0,0,.27));
+}
+
+
+/* =========================================================
+   コンパス
+   ========================================================= */
+
+.compass {
+  /*
+   * 河より下、手牌より下。
+   */
+  z-index: 6;
+
+  transform-style: preserve-3d;
+
+  box-shadow:
+    0 9px 0 #17170f,
+    0 15px 22px rgba(0,0,0,.50),
+    inset 0 2px 0 rgba(255,255,255,.10),
+    inset 0 -5px 12px rgba(0,0,0,.50),
+    inset 0 0 0 1px rgba(217,180,106,.18);
+
+  /*
+   * 卓面から少しだけ沈ませる。
+   */
+  transform:
+    translate(-50%, -50%)
+    translateZ(2px);
+}
+
+
+/*
+ * 中央の数字部分も少し奥まった感じにする。
+ */
+.cell-center {
+  box-shadow:
+    inset 0 3px 5px rgba(0,0,0,.88),
+    inset 0 -1px 0 rgba(255,255,255,.05);
+}
+
+
+/* =========================================================
+   選択牌
+   ========================================================= */
+
+.tile.selected {
+  transform:
+    translateY(-11px)
+    translateZ(14px);
+
+  box-shadow:
+    0 0 0 2px var(--gold-bright),
+
+    inset 1px 1px 0 rgba(255,255,255,.96),
+    inset -1px -2px 0 rgba(110,95,66,.18),
+
+    0 2px 0 #c0af80,
+    2px 5px 0 #988960,
+    5px 10px 10px rgba(0,0,0,.48),
+
+    0 0 18px rgba(243,215,138,.30);
+}
+
+
+/* =========================================================
+   ドラッグ中
+   ========================================================= */
+
+.tile.dragging {
+  transform:
+    translateY(-8px)
+    translateZ(18px)
+    rotateX(4deg);
+
+  filter:
+    brightness(1.05);
+
+  box-shadow:
+    0 0 0 2px rgba(243,215,138,.72),
+    0 10px 18px rgba(0,0,0,.40);
+}
+
+
+/* =========================================================
+   ツモ牌
+   ========================================================= */
+
+.tile.drawn-tile {
+  margin-left: 14px;
+}
+
+
+/* =========================================================
+   鳴き牌
+   ========================================================= */
+
+.tile.meld {
+  transform:
+    rotate(90deg)
+    translateZ(6px);
+}
+
+
+/* =========================================================
+   牌の側面を少し濃く
+   ========================================================= */
+
+.tile::before {
+  background:
+    linear-gradient(
+      90deg,
+      #d4c7a5 0%,
+      #a59676 55%,
+      #85795f 100%
+    );
+
+  box-shadow:
+    2px 2px 4px rgba(0,0,0,.24);
+}
+
+.tile::after {
+  background:
+    linear-gradient(
+      180deg,
+      #c5b795 0%,
+      #887c62 65%,
+      #6f664f 100%
+    );
+
+  box-shadow:
+    2px 3px 5px rgba(0,0,0,.27);
+}
