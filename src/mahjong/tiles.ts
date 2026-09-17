@@ -1,5 +1,5 @@
 // ひらがじゃん 牌定義
-// 77種類 = 通常46 + 濁音/半濁音26 + 小さい文字4 + 長音1
+// 82種類 = 通常46 + 濁音/半濁音26 + 小さい文字9 + 長音1
 
 export const SEION_ORDER: string[] = [
   'あ', 'い', 'う', 'え', 'お',
@@ -23,7 +23,9 @@ export const DAKUTEN_ORDER: string[] = [
   'ゔ',
 ]; // 26
 
-export const SMALL_ORDER: string[] = ['っ', 'ゃ', 'ゅ', 'ょ']; // 4
+export const SMALL_ORDER: string[] = [
+  'ぁ', 'ぃ', 'ぅ', 'ぇ', 'ぉ', 
+  'っ', 'ゃ', 'ゅ', 'ょ']; // 9
 export const CHOON_ORDER: string[] = ['ー']; // 1
 
 // ドラ計算用の全体順序（この配列内で「次」がドラになる。末尾は先頭に循環）

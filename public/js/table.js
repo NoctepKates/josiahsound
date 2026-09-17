@@ -248,16 +248,17 @@ function render(s) {
     if (!handEl) continue;
 
     if (divKey === 'self') {
-      const mainTiles = handOrder.map(
-        (kind, idx) =>
-          tileHtml(
-            kind,
-            kind === selectedTileId,
-            true,
-            false,
-            idx
-          )
-      );
+      const mainTiles = handOrder.map((tile, idx) =>
+        tileHtml(
+        tile.kind,
+        tile.id === selectedTileId,
+        true,
+        false,
+        idx,
+        false,
+        tile.id
+      )
+    );
 
       const mainTiles = handOrder.map((tile, idx) =>
         tileHtml(
@@ -276,7 +277,8 @@ function render(s) {
             true,
             false,
             -1,
-            true
+            true,
+            drawnTile.id
           )
         : '';
 
@@ -505,37 +507,29 @@ document.getElementById('devDebugToggle')?.addEventListener('click', () => {
 });
 
 function attachHandHandlers(handEl) {
-  const tiles =
-    [...handEl.querySelectorAll('.tile[data-kind]')];
+  const tiles = [...handEl.querySelectorAll('.tile[data-kind]')];
 
   tiles.forEach((el) => {
-    const kind = el.dataset.kind;
-    const isDrawn =
-      el.dataset.drawn === '1';
+    const tileId = el.dataset.tileId;
+    const isDrawn = el.dataset.drawn === '1';
 
     el.onclick = () => {
       if (el.classList.contains('selected')) {
-        selectedTileId = kind;
+        selectedTileId = tileId;
         doDiscard();
         return;
       }
 
-      handEl
-        .querySelectorAll('.tile')
-        .forEach((t) =>
-          t.classList.remove('selected')
-        );
+      handEl.querySelectorAll('.tile').forEach((t) =>
+        t.classList.remove('selected')
+      );
 
       el.classList.add('selected');
-      selectedTileId = kind;
+      selectedTileId = tileId;
     };
 
     el.ondragstart = (e) => {
-      dragFromIdx =
-        isDrawn
-          ? 'drawn'
-          : Number(el.dataset.idx);
-
+      dragFromIdx = isDrawn ? 'drawn' : Number(el.dataset.idx);
       e.dataTransfer.effectAllowed = 'move';
     };
 
@@ -552,38 +546,29 @@ function attachHandHandlers(handEl) {
       e.preventDefault();
       el.classList.remove('drop-target');
 
+      if (dragFromIdx === null) return;
+
       const toIdx = isDrawn
         ? handOrder.length
         : Number(el.dataset.idx);
-
-      if (dragFromIdx === null) return;
 
       let moved;
 
       if (dragFromIdx === 'drawn') {
         moved = state.yourDrawnTile;
       } else {
-        moved =
-          handOrder.splice(
-            dragFromIdx,
-            1
-          )[0];
+        moved = handOrder.splice(dragFromIdx, 1)[0];
       }
 
-      const insertAt =
-        Math.min(
-          toIdx,
-          handOrder.length
-        );
+      if (!moved) {
+        dragFromIdx = null;
+        return;
+      }
 
-      handOrder.splice(
-        insertAt,
-        0,
-        moved
-      );
+      const insertAt = Math.min(toIdx, handOrder.length);
+      handOrder.splice(insertAt, 0, moved);
 
       dragFromIdx = null;
-
       renderHandOnly();
     };
   });
@@ -593,35 +578,37 @@ function renderHandOnly() {
   if (!state) return;
 
   const handEl = document.getElementById('hand-self');
+  if (!handEl) return;
 
-  const mainTiles = handOrder.map((kind, idx) =>
+  const mainTiles = handOrder.map((tile, idx) =>
     tileHtml(
-      kind,
-      kind === selectedTileId,
+      tile.kind,
+      tile.id === selectedTileId,
       true,
       false,
-      idx
+      idx,
+      false,
+      tile.id
     )
   );
 
-  let drawnTileHtml = '';
+  const drawnTile = state.yourDrawnTile;
 
-  // ツモ牌が手牌の並び替え対象にまだ入っていない場合だけ表示する
-  if (
-    state.yourDrawnTile &&
-    !handOrder.includes(state.yourDrawnTile)
-  ) {
-    drawnTileHtml = tileHtml(
-      state.yourDrawnTile,
-      state.yourDrawnTile === selectedTileId,
-      true,
-      false,
-      -1,
-      true
+  if (drawnTile) {
+    mainTiles.push(
+      tileHtml(
+        drawnTile.kind,
+        drawnTile.id === selectedTileId,
+        true,
+        false,
+        -1,
+        true,
+        drawnTile.id
+      )
     );
   }
 
-  handEl.innerHTML = mainTiles.join('') + drawnTileHtml;
+  handEl.innerHTML = mainTiles.join('');
 
   attachHandHandlers(handEl);
 }
