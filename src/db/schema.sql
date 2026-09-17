@@ -38,8 +38,8 @@ CREATE TABLE IF NOT EXISTS friend_requests (
 CREATE TABLE IF NOT EXISTS words (
   id          INTEGER PRIMARY KEY AUTOINCREMENT,
   word        TEXT NOT NULL UNIQUE,
-  han         INTEGER NOT NULL DEFAULT 1,
-  note        TEXT,
+  han         TEXT NOT NULL DEFAULT '1',
+  tag         TEXT,
   created_at  INTEGER NOT NULL DEFAULT (unixepoch())
 );
 
