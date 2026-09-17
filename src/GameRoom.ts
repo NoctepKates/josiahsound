@@ -337,7 +337,7 @@ export class GameRoom {
           : [],
 
         yourDrawnTile:
-          this.currentTurnSeat === seat && this.turnDrawnTile
+          this.currentTurnSeat === viewSeat && this.turnDrawnTile
             ? {
                 id: this.turnDrawnTile.id,
                 kind: this.turnDrawnTile.kind,
