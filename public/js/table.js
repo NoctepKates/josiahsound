@@ -588,26 +588,21 @@ function canDeclareRiichi() {
   return state.canRiichi === true;
 }
 
-  const me =
-    state.players[state.yourSeat];
+function doDiscard() {
+  if (!selectedTileId) return;
+  if (!state) return;
 
-  if (
-    !me ||
-    me.riichi ||
-    me.melds.length > 0 ||
-    me.score < 1000
-  ) {
-    return false;
-  }
-
-  if (state.wallRemaining < 4) {
-    return false;
-  }
-
-  return (
-    Array.isArray(state.riichiDiscards) &&
-    state.riichiDiscards.length > 0
+  ws.send(
+    JSON.stringify({
+      type: 'discard',
+      tileId: selectedTileId,
+      riichi: riichiMode,
+      seat: state.yourSeat,
+    })
   );
+
+  selectedTileId = null;
+  riichiMode = false;
 }
 
 function doDiscard() {
