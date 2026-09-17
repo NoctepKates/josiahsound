@@ -125,7 +125,7 @@ function reconcileHandOrder(newTiles) {
   );
 
   handOrder = [...kept, ...remaining];
-}s
+}
 
 function render(s) {
   state = s;
@@ -271,7 +271,9 @@ function render(s) {
           tile.id === selectedTileId,
           true,
           false,
-          idx
+          idx,
+          false,
+          tile.id
         )
       );
 

@@ -5,7 +5,7 @@ import { ALL_TILE_KINDS } from './tiles';
 
 export interface WordDef {
   word: string;
-  han: number;
+  han: number | 'y';
   tag?: string[];
 }
 
