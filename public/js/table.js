@@ -110,17 +110,22 @@ function reconcileHandOrder(newTiles) {
   const kept = [];
 
   for (const oldTile of handOrder) {
-    const idx = remaining.findIndex((t) => t.id === oldTile.id);
+    const idx = remaining.findIndex(
+      (tile) => tile.id === oldTile.id
+    );
 
     if (idx !== -1) {
-      kept.push(remaining[idx]);
+      kept.push(oldTile);
       remaining.splice(idx, 1);
     }
   }
 
-  remaining.sort((a, b) => a.kind.localeCompare(b.kind));
+  remaining.sort((a, b) =>
+    a.kind.localeCompare(b.kind)
+  );
+
   handOrder = [...kept, ...remaining];
-}
+}s
 
 function render(s) {
   state = s;
@@ -150,7 +155,7 @@ function render(s) {
 
     if (s.yourDrawnTile) {
       const idx = hand.findIndex(
-        (t) => t.id === s.yourDrawnTile.id
+        (tile) => tile.id === s.yourDrawnTile.id
       );
 
       if (idx !== -1) {
