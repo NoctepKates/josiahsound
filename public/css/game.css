@@ -1241,3 +1241,433 @@ html, body { height: 100%; overflow: hidden; }
   box-shadow:
     2px 3px 5px rgba(0,0,0,.27);
 }
+
+/* =========================================================
+   最終・着席視点調整
+   ========================================================= */
+
+/* ---------------------------------------------------------
+   卓
+   --------------------------------------------------------- */
+
+.table-wrap {
+  transform:
+    perspective(1350px)
+    rotateX(42deg);
+
+  transform-origin: 50% 58%;
+  transform-style: preserve-3d;
+}
+
+
+/* ---------------------------------------------------------
+   レイヤー
+   --------------------------------------------------------- */
+
+/*
+ * HTML上では compass → river → seat の順。
+ * ここでは明示的に河をコンパスより前へ出す。
+ */
+
+.compass {
+  z-index: 20 !important;
+}
+
+.river {
+  z-index: 30 !important;
+}
+
+.seat {
+  z-index: 40 !important;
+}
+
+.player-tag {
+  z-index: 50 !important;
+}
+
+
+/*
+ * transformによるstacking contextの影響を避けるため、
+ * 河そのものをコンパスより前に置く。
+ */
+.river,
+.river-block {
+  position: absolute;
+}
+
+
+/* ---------------------------------------------------------
+   自分の手牌
+   ---------------------------------------------------------
+
+   自分だけは前回の見え方に戻す。
+   卓の手前に普通に寝かせて置いてある状態。
+ */
+
+.seat.bottom {
+  bottom: 3%;
+  left: calc(
+    50% -
+    (
+      14 * 42px +
+      13 * var(--tile-gap) +
+      14px
+    ) / 2
+  );
+
+  transform: none !important;
+  scale: 1 !important;
+
+  align-items: flex-start;
+}
+
+.seat.bottom .hand-row {
+  transform: none !important;
+  scale: 1 !important;
+}
+
+.seat.bottom .tile {
+  transform: translateZ(5px);
+}
+
+
+/* ---------------------------------------------------------
+   他家の手牌
+   ---------------------------------------------------------
+
+   「卓面に寝ている」ではなく、
+   「牌の底辺が卓面に接して立っている」
+   ようにする。
+ */
+
+
+/* 対面 */
+
+.seat.top {
+  top: 3%;
+  left: 50%;
+
+  /*
+   * 180°回転 + 遠近縮小
+   */
+  transform:
+    translateX(-50%)
+    rotate(180deg)
+    scale(.80)
+    translateZ(25px) !important;
+
+  transform-origin: 50% 100%;
+}
+
+
+/*
+ * 対面の牌をさらに浮かせる。
+ */
+.seat.top .hand-row {
+  transform:
+    perspective(600px)
+    rotateX(-8deg);
+
+  transform-origin: center bottom;
+}
+
+
+/*
+ * 対面の牌。
+ *
+ * 「立っている」感じを出すため、
+ * 下側に強い接地影を作る。
+ */
+.seat.top .tile {
+  transform:
+    translateZ(10px);
+
+  box-shadow:
+    inset 1px 1px 0 rgba(255,255,255,.96),
+    inset -1px -2px 0 rgba(110,95,66,.20),
+    0 1px 0 #b5a984,
+    1px 3px 0 #a39575,
+    3px 6px 0 #83765c,
+    5px 11px 10px rgba(0,0,0,.48);
+}
+
+
+/* ---------------------------------------------------------
+   右側の手牌
+   --------------------------------------------------------- */
+
+.seat.right {
+  right: 1.5%;
+  top: 50%;
+
+  transform:
+    translate(50%, -50%)
+    rotate(-90deg)
+    scale(.86)
+    translateZ(22px) !important;
+
+  transform-origin: 50% 100%;
+}
+
+
+/*
+ * 右側は牌の「下辺」が卓面につく方向へ。
+ */
+.seat.right .hand-row {
+  transform:
+    perspective(600px)
+    rotateX(-8deg);
+
+  transform-origin: center bottom;
+}
+
+.seat.right .tile {
+  transform:
+    translateZ(9px);
+
+  box-shadow:
+    inset 1px 1px 0 rgba(255,255,255,.96),
+    inset -1px -2px 0 rgba(110,95,66,.20),
+    0 1px 0 #b5a984,
+    1px 3px 0 #a39575,
+    3px 6px 0 #83765c,
+    5px 11px 10px rgba(0,0,0,.45);
+}
+
+
+/* ---------------------------------------------------------
+   左側の手牌
+   --------------------------------------------------------- */
+
+.seat.left {
+  left: 1.5%;
+  top: 50%;
+
+  transform:
+    translate(-50%, -50%)
+    rotate(90deg)
+    scale(.86)
+    translateZ(22px) !important;
+
+  transform-origin: 50% 100%;
+}
+
+.seat.left .hand-row {
+  transform:
+    perspective(600px)
+    rotateX(-8deg);
+
+  transform-origin: center bottom;
+}
+
+.seat.left .tile {
+  transform:
+    translateZ(9px);
+
+  box-shadow:
+    inset 1px 1px 0 rgba(255,255,255,.96),
+    inset -1px -2px 0 rgba(110,95,66,.20),
+    0 1px 0 #b5a984,
+    1px 3px 0 #a39575,
+    3px 6px 0 #83765c,
+    5px 11px 10px rgba(0,0,0,.45);
+}
+
+
+/* ---------------------------------------------------------
+   他家の手牌を「立っている」ように見せる補助
+   --------------------------------------------------------- */
+
+/*
+ * 牌の下に接地影。
+ *
+ * 実際に立体モデルを作っているわけではないが、
+ * この影によって卓面から立ち上がっているように見える。
+ */
+
+.seat.top .hand-row::after,
+.seat.left .hand-row::after,
+.seat.right .hand-row::after {
+  content: "";
+  position: absolute;
+
+  left: 2%;
+  right: 2%;
+  bottom: -7px;
+
+  height: 7px;
+
+  background:
+    radial-gradient(
+      ellipse,
+      rgba(0,0,0,.52) 0%,
+      rgba(0,0,0,.25) 45%,
+      transparent 75%
+    );
+
+  filter: blur(3px);
+  pointer-events: none;
+
+  z-index: -1;
+}
+
+
+/* ---------------------------------------------------------
+   河
+   --------------------------------------------------------- */
+
+.river {
+  z-index: 30 !important;
+  pointer-events: none;
+}
+
+
+/*
+ * コンパスより確実に上にする。
+ */
+.river.river-bottom,
+.river.river-top,
+.river.river-left,
+.river.river-right {
+  z-index: 30 !important;
+}
+
+
+/*
+ * 河の牌そのものもコンパスより上。
+ */
+.river .tile {
+  position: relative;
+  z-index: 31;
+
+  transform:
+    translateZ(7px);
+}
+
+
+/* ---------------------------------------------------------
+   コンパス
+   --------------------------------------------------------- */
+
+.compass {
+  z-index: 20 !important;
+  position: absolute;
+
+  transform:
+    translate(-50%, -50%)
+    translateZ(0) !important;
+}
+
+
+/*
+ * コンパスの子要素が河より上に出ないようにする。
+ */
+.compass,
+.compass * {
+  z-index: auto;
+}
+
+
+/* ---------------------------------------------------------
+   河の遠近感
+   --------------------------------------------------------- */
+
+/* 自分の河 */
+.river.river-bottom {
+  transform:
+    translateX(-50%)
+    scale(1) !important;
+
+  z-index: 30 !important;
+}
+
+
+/* 対面の河 */
+.river.river-top {
+  transform:
+    translateX(-50%)
+    rotate(180deg)
+    scale(.82) !important;
+
+  z-index: 30 !important;
+}
+
+
+/* 左 */
+.river.river-left {
+  transform:
+    rotate(90deg)
+    scale(.88) !important;
+
+  z-index: 30 !important;
+}
+
+
+/* 右 */
+.river.river-right {
+  transform:
+    rotate(-90deg)
+    scale(.88) !important;
+
+  z-index: 30 !important;
+}
+
+
+/* ---------------------------------------------------------
+   河の牌の影
+   --------------------------------------------------------- */
+
+.river .tile {
+  box-shadow:
+    inset 1px 1px 0 rgba(255,255,255,.92),
+    inset -1px -2px 0 rgba(110,95,66,.20),
+    0 1px 0 #b5a984,
+    1px 3px 0 #a39575,
+    2px 5px 0 #83765c,
+    4px 8px 7px rgba(0,0,0,.42);
+}
+
+
+/* ---------------------------------------------------------
+   遠くの牌ほど少し暗くする
+   --------------------------------------------------------- */
+
+.seat.top .tile {
+  filter: brightness(.94);
+}
+
+.seat.left .tile,
+.seat.right .tile {
+  filter: brightness(.97);
+}
+
+
+/* ---------------------------------------------------------
+   立体感のための牌表面ハイライト
+   --------------------------------------------------------- */
+
+.seat.top .tile::before,
+.seat.left .tile::before,
+.seat.right .tile::before {
+  opacity: .92;
+}
+
+
+/* ---------------------------------------------------------
+   選択牌だけは従来通り浮く
+   --------------------------------------------------------- */
+
+.seat.bottom .tile.selected {
+  transform:
+    translateY(-11px)
+    translateZ(14px) !important;
+}
+
+
+/* ---------------------------------------------------------
+   自分のツモ牌
+   --------------------------------------------------------- */
+
+.seat.bottom .tile.drawn-tile {
+  margin-left: 14px;
+}
