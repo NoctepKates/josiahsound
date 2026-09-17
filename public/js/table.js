@@ -148,22 +148,8 @@ function render(s) {
 
   renderDevBar(s);
 
-  let drawnTile = null;
-
   if (my !== -1) {
-    const hand = [...s.yourHand];
-
-    if (s.yourDrawnTile) {
-      const idx = hand.findIndex(
-        (tile) => tile.id === s.yourDrawnTile.id
-      );
-
-      if (idx !== -1) {
-        drawnTile = hand.splice(idx, 1)[0];
-      }
-    }
-
-    reconcileHandOrder(hand);
+    reconcileHandOrder([...s.yourHand]);
   }
 
   const activeDivKeys =
@@ -253,6 +239,8 @@ function render(s) {
     if (!handEl) continue;
 
     if (divKey === 'self') {
+      const drawnId = state.yourDrawnTile?.id ?? null;
+
       const mainTiles = handOrder.map((tile, idx) =>
         tileHtml(
           tile.kind,
@@ -260,26 +248,12 @@ function render(s) {
           true,
           false,
           idx,
-          false,
+          tile.id === drawnId,
           tile.id
         )
       );
 
-      const drawnTileHtml = drawnTile
-        ? tileHtml(
-            drawnTile.kind,
-            drawnTile.id === selectedTileId,
-            true,
-            false,
-            -1,
-            true,
-            drawnTile.id
-          )
-        : '';
-
-      handEl.innerHTML =
-        mainTiles.join('') +
-        drawnTileHtml;
+      handEl.innerHTML = mainTiles.join('');
 
       attachHandHandlers(handEl);
     } else {
@@ -543,14 +517,28 @@ function attachHandHandlers(handEl) {
 
       if (dragFromIdx === null) return;
 
-      const toIdx = isDrawn
-        ? handOrder.length
-        : Number(el.dataset.idx);
+      const toIdx = Number(el.dataset.idx);
 
       let moved;
 
       if (dragFromIdx === 'drawn') {
-        moved = state.yourDrawnTile;
+        const drawnId = state.yourDrawnTile?.id;
+
+        if (!drawnId) {
+          dragFromIdx = null;
+          return;
+        }
+
+        const fromIdx = handOrder.findIndex(
+          (tile) => tile.id === drawnId
+        );
+
+        if (fromIdx === -1) {
+          dragFromIdx = null;
+          return;
+        }
+
+        moved = handOrder.splice(fromIdx, 1)[0];
       } else {
         moved = handOrder.splice(dragFromIdx, 1)[0];
       }
@@ -586,22 +574,6 @@ function renderHandOnly() {
       tile.id
     )
   );
-
-  const drawnTile = state.yourDrawnTile;
-
-  if (drawnTile) {
-    mainTiles.push(
-      tileHtml(
-        drawnTile.kind,
-        drawnTile.id === selectedTileId,
-        true,
-        false,
-        -1,
-        true,
-        drawnTile.id
-      )
-    );
-  }
 
   handEl.innerHTML = mainTiles.join('');
 
