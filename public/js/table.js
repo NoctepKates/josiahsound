@@ -585,6 +585,9 @@ function canDeclareRiichi() {
     return false;
   }
 
+  return state.canRiichi === true;
+}
+
   const me =
     state.players[state.yourSeat];
 
@@ -609,28 +612,8 @@ function canDeclareRiichi() {
 
 function doDiscard() {
   if (!selectedTileId) return;
-
   if (!state) return;
 
-  if (riichiMode) {
-    const legal =
-      Array.isArray(state.riichiDiscards) &&
-      state.riichiDiscards.includes(
-        selectedTileId
-      );
-
-    if (!legal) {
-      alert(
-        'その牌を切ってもテンパイにならないため、リーチできません。'
-      );
-      return;
-    }
-  }
-
-  /*
-   * 開発者モードでは1つのWebSocketで複数席を操作するため、
-   * 必ず現在表示している席番号を送る。
-   */
   ws.send(
     JSON.stringify({
       type: 'discard',
