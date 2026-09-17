@@ -134,9 +134,19 @@ export class GameRoom {
 
   async loadDict(): Promise<WordDef[]> {
     try {
-      const res = await this.env.DB.prepare('SELECT word, han FROM words').all();
-      return (res.results || []) as WordDef[];
-    } catch {
+      const res = await this.env.DB
+        .prepare('SELECT word, han, tag FROM words')
+        .all();
+
+      return (res.results || []).map((row: any) => ({
+        word: String(row.word),
+        han: row.han === 'y' ? 'y' : Number(row.han),
+        tag: typeof row.tag === 'string'
+          ? row.tag.split(/\s+/).filter(Boolean)
+          : [],
+      }));
+    } catch (e) {
+      console.error('辞書読み込み失敗:', e);
       return [];
     }
   }
@@ -345,6 +355,13 @@ export class GameRoom {
             : null,
         // 実際にテンパイになる場合のみtrue(サーバー側で判定した正式な値)
         canRiichi: isMyTurnNow ? this.computeCanRiichi(viewSeat) : false,
+        canTsumo:
+          isMyTurnNow &&
+          this.handCharsForWinCheck(me).length === 14 &&
+          canWin(
+            this.handCharsForWinCheck(me),
+            this.wordDict
+          ),
       }));
     }
     for (const ws of this.spectatorSockets) {

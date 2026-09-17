@@ -129,7 +129,7 @@ function reconcileHandOrder(newTiles) {
 
 function render(s) {
   state = s;
-  canTsumoNow = false;
+  canTsumoNow = s.canTsumo === true;
 
   const n = s.rules.playerCount;
   const my = s.yourSeat;
