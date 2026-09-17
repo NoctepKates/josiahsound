@@ -9,7 +9,7 @@ let dragFromIdx = null;
 let devGodView = true; // 開発者モード: 他プレイヤーの手牌も見えるようにするか
 let devWallVisible = false;
 
-let handOrder = [ { id, king } ];
+let handOrder = [];
 
 const SEAT_DIV_ORDER = ['self', 'r1', 'r2', 'r3'];
 
@@ -253,18 +253,6 @@ function render(s) {
     if (!handEl) continue;
 
     if (divKey === 'self') {
-      const mainTiles = handOrder.map((tile, idx) =>
-        tileHtml(
-        tile.kind,
-        tile.id === selectedTileId,
-        true,
-        false,
-        idx,
-        false,
-        tile.id
-      )
-    );
-
       const mainTiles = handOrder.map((tile, idx) =>
         tileHtml(
           tile.kind,
