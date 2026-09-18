@@ -1504,7 +1504,7 @@ body {
   transform:
     perspective(831px)
     rotateX(26deg)
-    translateY(-60px) !important;
+    translateY(-128px) !important;
 }
 
 
@@ -1532,12 +1532,13 @@ body {
   left: 100px !important;
 }
 
-
-/* =========================================================
-   コンパス中央の残り枚数
-   ========================================================= */
+/* =========================================
+   残り枚数：7セグ表示
+   3D卓の影響を受けない完全2D表示
+   ========================================= */
 
 #wallDigits {
+  position: relative !important;
   display: flex !important;
   align-items: center !important;
   justify-content: center !important;
@@ -1545,104 +1546,134 @@ body {
   width: 100% !important;
   height: 100% !important;
 
+  transform: none !important;
+  transform-style: flat !important;
+
   font-size: 0 !important;
+  line-height: 1 !important;
+
+  overflow: visible !important;
 }
 
-/*
- * table.js が生成する .digit / .digit-group を
- * 中央セルの中に確実に表示。
- */
+#wallDigits::before,
+#wallDigits::after {
+  display: none !important;
+  content: none !important;
+}
+
+/* 2桁全体 */
 #wallDigits .digit-group {
   display: flex !important;
+  flex-direction: row !important;
   align-items: center !important;
   justify-content: center !important;
 
   gap: 5px !important;
+
+  width: auto !important;
+  height: 34px !important;
+
+  transform: none !important;
+  transform-style: flat !important;
 }
 
+/* 1桁 */
 #wallDigits .digit {
   position: relative !important;
 
-  width: 24px !important;
-  height: 42px !important;
+  width: 20px !important;
+  height: 34px !important;
 
-  flex: 0 0 24px !important;
+  flex: 0 0 20px !important;
+
+  transform: none !important;
+  transform-style: flat !important;
+
+  overflow: visible !important;
 }
 
-/*
- * 7セグメントそのもの。
- * 既存CSSが消えていても見えるようにする。
- */
+/* セグメント共通 */
 #wallDigits .seg {
   position: absolute !important;
 
   display: block !important;
 
-  width: 6px !important;
-  height: 6px !important;
+  margin: 0 !important;
+  padding: 0 !important;
 
-  background: #5b604f !important;
+  width: 14px !important;
+  height: 4px !important;
+
   border-radius: 2px !important;
 
-  opacity: .25 !important;
+  background: transparent !important;
+
+  transform: none !important;
+  transform-origin: center center !important;
+
+  box-shadow: none !important;
+
+  pointer-events: none !important;
 }
 
+/* 点灯 */
 #wallDigits .seg.on {
-  opacity: 1 !important;
-  background: #e8d27d !important;
-
+  background: #f3d78a !important;
   box-shadow:
-    0 0 5px rgba(232,210,125,.75) !important;
+    0 0 3px rgba(243,215,138,.8),
+    0 0 6px rgba(243,215,138,.35) !important;
 }
-
 
 /* 上 */
 #wallDigits .seg-a {
-  left: 9px !important;
+  left: 3px !important;
   top: 0 !important;
-
-  width: 15px !important;
-  height: 6px !important;
 }
 
 /* 右上 */
 #wallDigits .seg-b {
   right: 0 !important;
-  top: 4px !important;
+  top: 3px !important;
+
+  width: 4px !important;
+  height: 12px !important;
 }
 
 /* 右下 */
 #wallDigits .seg-c {
   right: 0 !important;
-  bottom: 4px !important;
+  bottom: 3px !important;
+
+  width: 4px !important;
+  height: 12px !important;
 }
 
 /* 下 */
 #wallDigits .seg-d {
-  left: 9px !important;
+  left: 3px !important;
   bottom: 0 !important;
-
-  width: 15px !important;
-  height: 6px !important;
 }
 
 /* 左下 */
 #wallDigits .seg-e {
   left: 0 !important;
-  bottom: 4px !important;
+  bottom: 3px !important;
+
+  width: 4px !important;
+  height: 12px !important;
 }
 
 /* 左上 */
 #wallDigits .seg-f {
   left: 0 !important;
-  top: 4px !important;
+  top: 3px !important;
+
+  width: 4px !important;
+  height: 12px !important;
 }
 
 /* 中央 */
 #wallDigits .seg-g {
-  left: 9px !important;
-  top: 18px !important;
-
-  width: 15px !important;
-  height: 6px !important;
+  left: 3px !important;
+  top: 15px !important;
 }
