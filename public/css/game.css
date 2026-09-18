@@ -601,212 +601,172 @@ body {
 
 
 /* =========================================================
-   6面立体牌
+   他家の手牌
    ========================================================= */
 
-.tile3d {
-  position: relative;
+/*
+ * 他家の牌は「卓の上に立っている牌」。
+ *
+ * 座席そのものが
+ *   対面 = 180deg
+ *   右   = -90deg
+ *   左   = 90deg
+ *
+ * 回転しているので、牌自身は全員同じ
+ * rotateX(-90deg) を使う。
+ *
+ * これにより6面モデルの表・裏・左右・上下が
+ * そのまま立体として残る。
+ */
 
-  flex: 0 0 auto;
 
+/* -------------------------
+   他家の牌本体
+   ------------------------- */
+
+.seat.top .tile3d,
+.seat.left .tile3d,
+.seat.right .tile3d {
   width: var(--tile-w);
   height: var(--river-tile-h);
 
-  box-sizing: border-box;
-
-  transform-style: preserve-3d;
-
   /*
-   * ここでは牌本体を回転させない。
-   * 回転は座席側で行う。
+   * 卓面から少し浮かせる。
+   *
+   * rotateX(-90deg)
+   * = 寝ている牌を立てる。
    */
   transform:
-    translateZ(3px);
+    translateZ(8px)
+    rotateX(-90deg);
 
-  overflow: visible;
+  transform-origin:
+    center bottom;
+
+  filter:
+    drop-shadow(
+      2px 5px 4px rgba(0,0,0,.42)
+    );
 }
 
 
-/* 6面共通 */
+/* -------------------------
+   他家の表面
+   ------------------------- */
 
-.tile3d > .tile-face,
-.tile3d > .tile-front {
-  position: absolute;
-
-  left: 0;
-  top: 0;
-
-  box-sizing: border-box;
-
-  transform-style: preserve-3d;
-
-  /*
-   * これを hidden にすると、
-   * 親の回転によって表面まで消える場合がある。
-   *
-   * したがって今回はvisible。
-   */
-  backface-visibility: visible;
-}
-
-
-/* 表 */
-
-.tile3d > .tile-front {
-  width: 100%;
-  height: 100%;
-
-  margin: 0;
+.seat.top .tile3d > .tile-front,
+.seat.left .tile3d > .tile-front,
+.seat.right .tile3d > .tile-front {
+  visibility: visible !important;
+  opacity: 1 !important;
 
   transform:
     translateZ(
       calc(var(--tile-depth) / 2)
     ) !important;
-
-  z-index: 6;
 }
 
 
-/* 裏 */
+/* -------------------------
+   他家の裏面
+   ------------------------- */
 
-.tile3d > .tile-back {
-  width: 100%;
-  height: 100%;
-
-  border: 1px solid #203f3a;
-  border-radius: 5px;
-
-  background:
-    linear-gradient(
-      135deg,
-      rgba(255,255,255,.18),
-      transparent 38%
-    ),
-    linear-gradient(
-      180deg,
-      #527a73 0%,
-      var(--tile-back) 52%,
-      #1f403b 100%
-    );
-
-  transform:
-    translateZ(
-      calc(var(--tile-depth) / -2)
-    )
-    rotateY(180deg);
-
-  z-index: 1;
+.seat.top .tile3d > .tile-back,
+.seat.left .tile3d > .tile-back,
+.seat.right .tile3d > .tile-back {
+  visibility: visible;
 }
 
 
-/* 左右面 */
+/* -------------------------
+   牌の6面を確実に描画
+   ------------------------- */
 
-.tile3d > .tile-left,
-.tile3d > .tile-right {
-  width: var(--tile-depth);
-  height: 100%;
-
-  border: 1px solid var(--tile-side-dark);
-
-  background:
-    linear-gradient(
-      180deg,
-      var(--tile-side-light) 0%,
-      var(--tile-side-mid) 55%,
-      var(--tile-side-dark) 100%
-    );
+.seat.top .tile3d > .tile-face,
+.seat.top .tile3d > .tile-front,
+.seat.left .tile3d > .tile-face,
+.seat.left .tile3d > .tile-front,
+.seat.right .tile3d > .tile-face,
+.seat.right .tile3d > .tile-front {
+  backface-visibility: visible;
 }
 
 
-/* 左面 */
+/* -------------------------
+   手牌列
+   ------------------------- */
 
-.tile3d > .tile-left {
-  left:
-    calc(var(--tile-depth) / -2);
+/*
+ * 以前の
+ *
+ *   perspective(...)
+ *   rotateX(-10deg)
+ *
+ * は削除。
+ *
+ * 牌そのものが立っているので、
+ * rowを傾ける必要はない。
+ */
 
-  transform:
-    rotateY(-90deg);
+.seat.top .hand-row,
+.seat.left .hand-row,
+.seat.right .hand-row {
+  position: relative;
 
-  transform-origin:
-    right center;
-}
-
-
-/* 右面 */
-
-.tile3d > .tile-right {
-  left:
-    calc(
-      100% -
-      var(--tile-depth) / 2
-    );
-
-  transform:
-    rotateY(90deg);
-
-  transform-origin:
-    left center;
-}
-
-
-/* 上下面 */
-
-.tile3d > .tile-top,
-.tile3d > .tile-bottom {
-  width: 100%;
-  height: var(--tile-depth);
-
-  border: 1px solid var(--tile-side-dark);
-
-  background:
-    linear-gradient(
-      90deg,
-      var(--tile-side-light) 0%,
-      var(--tile-side-mid) 55%,
-      var(--tile-side-dark) 100%
-    );
-}
-
-
-/* 上面 */
-
-.tile3d > .tile-top {
-  top:
-    calc(var(--tile-depth) / -2);
-
-  transform:
-    rotateX(90deg);
+  transform: none;
 
   transform-origin:
     center bottom;
+
+  /*
+   * 6面がrowの中でも維持されるようにする。
+   */
+  transform-style: preserve-3d;
 }
 
 
-/* 下面 */
+/* -------------------------
+   接地影
+   ------------------------- */
 
-.tile3d > .tile-bottom {
-  top:
-    calc(
-      100% -
-      var(--tile-depth) / 2
+.seat.top .hand-row::after,
+.seat.left .hand-row::after,
+.seat.right .hand-row::after {
+  content: "";
+
+  position: absolute;
+
+  left: 2%;
+  right: 2%;
+
+  bottom: -8px;
+
+  height: 9px;
+
+  background:
+    radial-gradient(
+      ellipse,
+      rgba(0,0,0,.55) 0%,
+      rgba(0,0,0,.28) 42%,
+      transparent 75%
     );
 
-  transform:
-    rotateX(-90deg);
+  filter: blur(3px);
 
-  transform-origin:
-    center top;
+  pointer-events: none;
+
+  z-index: -1;
 }
 
 
-/*
- * 元の .tile の疑似要素による側面は
- * 6面モデルでは不要。
- */
+/* -------------------------
+   他家の牌の接地調整
+   ------------------------- */
 
-.tile3d > .tile-front::before,
-.tile3d > .tile-front::after {
-  display: none !important;
+.seat.top .tile3d,
+.seat.left .tile3d,
+.seat.right .tile3d {
+  margin-bottom: 0;
 }
 
 
