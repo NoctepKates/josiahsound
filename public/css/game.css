@@ -1491,12 +1491,13 @@ body {
 }
 
 /* =========================================================
-   卓全体を上へ
+   最終調整
    ========================================================= */
 
+/* 卓全体を上へ
+   現在の margin-top 8px を小さくする */
 .table-wrap {
-  position: relative;
-  top: -35px;
+  margin-top: -35px !important;
 }
 
 
@@ -1504,33 +1505,36 @@ body {
    自分の手牌を右へ
    ========================================================= */
 
-.seat.bottom {
-  left: 8% !important;
+/* 座席の基準位置はそのままにして、
+   手牌だけ右へ動かす */
+.seat.bottom .hand-row {
+  position: relative;
+  left: 55px;
+}
+
+
+/* 鳴き牌も自分の手牌と一緒に右へ */
+.seat.bottom .meld-row {
+  position: relative;
+  left: 55px;
 }
 
 
 /* =========================================================
-   残り枚数表示
+   残り枚数
    ========================================================= */
 
-/* 山の残り枚数を卓上に表示 */
+/* 「残り」「枚」は付けない。
+   table.js が s.wallRemaining を7セグ表示する。 */
+#wallDigits::before,
+#wallDigits::after {
+  content: none !important;
+}
+
+
+/* 数字が中央セルからはみ出さないようにする */
 #wallDigits {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 22px;
-  font-weight: bold;
-  color: #fff8dc;
-  text-shadow:
-    0 2px 3px rgba(0,0,0,.8),
-    0 0 3px rgba(0,0,0,.5);
-}
-
-/* 残り枚数の文字 */
-#wallDigits::before {
-  content: "残り ";
-}
-
-#wallDigits::after {
-  content: " 枚";
 }
