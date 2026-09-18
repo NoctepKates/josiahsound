@@ -1317,3 +1317,220 @@ body {
 .tile3d > .tile-front[data-kind] {
   pointer-events: auto;
 }
+
+/* =========================================================
+   座席位置の復元
+   ========================================================= */
+
+/*
+ * .seat は position:absolute なので、
+ * 各座席の基準位置を明示する。
+ *
+ * 河・コンパスには触れない。
+ */
+
+
+/* 自分 */
+
+.seat.bottom {
+  position: absolute;
+
+  left: 3%;
+  bottom: 3%;
+
+  transform: none !important;
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+
+  z-index: 40;
+}
+
+
+/* 右家 */
+
+.seat.right {
+  position: absolute;
+
+  right: 1.5%;
+  top: 50%;
+
+  transform:
+    translate(50%, -50%)
+    rotate(-90deg);
+
+  transform-origin: center center;
+
+  z-index: 40;
+}
+
+
+/* 対面 */
+
+.seat.top {
+  position: absolute;
+
+  top: 3%;
+  left: 50%;
+
+  transform:
+    translateX(-50%)
+    rotate(180deg);
+
+  transform-origin: center center;
+
+  z-index: 40;
+}
+
+
+/* 左家 */
+
+.seat.left {
+  position: absolute;
+
+  left: 1.5%;
+  top: 50%;
+
+  transform:
+    translate(-50%, -50%)
+    rotate(90deg);
+
+  transform-origin: center center;
+
+  z-index: 40;
+}
+
+
+/* =========================================================
+   プレイヤー名の位置
+   ========================================================= */
+
+.player-tag {
+  position: absolute;
+
+  z-index: 50;
+
+  pointer-events: none;
+}
+
+
+/* 自分 */
+
+.player-tag.corner-self {
+  left: 8px;
+  bottom: 8px;
+}
+
+
+/* 右家 */
+
+.player-tag.corner-r1 {
+  top: 8px;
+  left: 8px;
+}
+
+
+/* 対面 */
+
+.player-tag.corner-r2 {
+  top: 8px;
+  right: 8px;
+}
+
+
+/* 左家 */
+
+.player-tag.corner-r3 {
+  bottom: 8px;
+  right: 8px;
+}
+
+
+/* =========================================================
+   自分の手牌の横並び
+   ========================================================= */
+
+.seat.bottom .hand-row {
+  display: flex;
+
+  gap: var(--tile-gap);
+
+  min-height: 58px;
+
+  position: relative;
+
+  z-index: 41;
+
+  transform: none !important;
+
+  perspective: none !important;
+}
+
+
+/* =========================================================
+   自分の牌
+   ========================================================= */
+
+.seat.bottom .hand-row .tile3d {
+  flex: 0 0 auto;
+
+  transform:
+    translateZ(3px);
+}
+
+
+/* 選択牌 */
+
+.seat.bottom .hand-row .tile3d > .tile-front.selected {
+  transform:
+    translateZ(
+      calc(var(--tile-depth) / 2)
+    )
+    translateY(-11px);
+}
+
+/* =========================================================
+   卓全体を上へ
+   ========================================================= */
+
+.table-wrap {
+  position: relative;
+  top: -35px;
+}
+
+
+/* =========================================================
+   自分の手牌を右へ
+   ========================================================= */
+
+.seat.bottom {
+  left: 8% !important;
+}
+
+
+/* =========================================================
+   残り枚数表示
+   ========================================================= */
+
+/* 山の残り枚数を卓上に表示 */
+#wallDigits {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  font-weight: bold;
+  color: #fff8dc;
+  text-shadow:
+    0 2px 3px rgba(0,0,0,.8),
+    0 0 3px rgba(0,0,0,.5);
+}
+
+/* 残り枚数の文字 */
+#wallDigits::before {
+  content: "残り ";
+}
+
+#wallDigits::after {
+  content: " 枚";
+}
