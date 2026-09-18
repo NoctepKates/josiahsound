@@ -1491,50 +1491,158 @@ body {
 }
 
 /* =========================================================
-   最終調整
+   卓全体の位置
    ========================================================= */
 
-/* 卓全体を上へ
-   現在の margin-top 8px を小さくする */
+/*
+ * table-wrap 自体を通常のレイアウト位置から上へ移動。
+ * margin ではなく transform の translateY を使う。
+ */
 .table-wrap {
-  margin-top: -35px !important;
+  top: 0 !important;
+
+  transform:
+    perspective(831px)
+    rotateX(26deg)
+    translateY(-60px) !important;
 }
 
 
 /* =========================================================
-   自分の手牌を右へ
+   自分の手牌
    ========================================================= */
 
-/* 座席の基準位置はそのままにして、
-   手牌だけ右へ動かす */
-.seat.bottom .hand-row {
-  position: relative;
-  left: 55px;
+/*
+ * 座席そのものではなく、手牌列を直接右へ。
+ */
+#seat-self {
+  left: 3% !important;
+  bottom: 3% !important;
+}
+
+#hand-self {
+  position: relative !important;
+  left: 100px !important;
 }
 
 
-/* 鳴き牌も自分の手牌と一緒に右へ */
-.seat.bottom .meld-row {
-  position: relative;
-  left: 55px;
+/* 鳴き牌も同じだけ右へ */
+#meld-self {
+  position: relative !important;
+  left: 100px !important;
 }
 
 
 /* =========================================================
-   残り枚数
+   コンパス中央の残り枚数
    ========================================================= */
 
-/* 「残り」「枚」は付けない。
-   table.js が s.wallRemaining を7セグ表示する。 */
-#wallDigits::before,
-#wallDigits::after {
-  content: none !important;
-}
-
-
-/* 数字が中央セルからはみ出さないようにする */
 #wallDigits {
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+
+  width: 100% !important;
+  height: 100% !important;
+
+  font-size: 0 !important;
+}
+
+/*
+ * table.js が生成する .digit / .digit-group を
+ * 中央セルの中に確実に表示。
+ */
+#wallDigits .digit-group {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+
+  gap: 5px !important;
+}
+
+#wallDigits .digit {
+  position: relative !important;
+
+  width: 24px !important;
+  height: 42px !important;
+
+  flex: 0 0 24px !important;
+}
+
+/*
+ * 7セグメントそのもの。
+ * 既存CSSが消えていても見えるようにする。
+ */
+#wallDigits .seg {
+  position: absolute !important;
+
+  display: block !important;
+
+  width: 6px !important;
+  height: 6px !important;
+
+  background: #5b604f !important;
+  border-radius: 2px !important;
+
+  opacity: .25 !important;
+}
+
+#wallDigits .seg.on {
+  opacity: 1 !important;
+  background: #e8d27d !important;
+
+  box-shadow:
+    0 0 5px rgba(232,210,125,.75) !important;
+}
+
+
+/* 上 */
+#wallDigits .seg-a {
+  left: 9px !important;
+  top: 0 !important;
+
+  width: 15px !important;
+  height: 6px !important;
+}
+
+/* 右上 */
+#wallDigits .seg-b {
+  right: 0 !important;
+  top: 4px !important;
+}
+
+/* 右下 */
+#wallDigits .seg-c {
+  right: 0 !important;
+  bottom: 4px !important;
+}
+
+/* 下 */
+#wallDigits .seg-d {
+  left: 9px !important;
+  bottom: 0 !important;
+
+  width: 15px !important;
+  height: 6px !important;
+}
+
+/* 左下 */
+#wallDigits .seg-e {
+  left: 0 !important;
+  bottom: 4px !important;
+}
+
+/* 左上 */
+#wallDigits .seg-f {
+  left: 0 !important;
+  top: 4px !important;
+}
+
+/* 中央 */
+#wallDigits .seg-g {
+  left: 9px !important;
+  top: 18px !important;
+
+  width: 15px !important;
+  height: 6px !important;
 }
