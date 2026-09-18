@@ -4,7 +4,7 @@
   --compass-size: 195px;
   --river-tile-h: 42px;
 
-  --tile-depth: 6px;
+  --tile-depth: 10px;
 
   --tile-face-top: #fffef9;
   --tile-face-bottom: #e6dbc0;
@@ -815,85 +815,107 @@ body {
    ========================================================= */
 
 /*
- * 重要：
+ * 他家の牌は「卓の上に立っている牌」。
  *
- * ここでは .tile3d を回転させない。
+ * 座席そのものが
+ *   対面 = 180deg
+ *   右   = -90deg
+ *   左   = 90deg
  *
- * 既に .seat が
+ * 回転しているので、牌自身は全員同じ
+ * rotateX(-90deg) を使う。
  *
- *   対面 = 180°
- *   左   = 90°
- *   右   = -90°
- *
- * しているため。
- *
- * 牌そのものまで rotateX() すると
- * 6面構造と衝突する。
+ * これにより6面モデルの表・裏・左右・上下が
+ * そのまま立体として残る。
  */
 
 
-/* 対面 */
+/* -------------------------
+   他家の牌本体
+   ------------------------- */
 
-.seat.top .tile3d {
-  width: var(--tile-w);
-  height: var(--river-tile-h);
-
-  transform:
-    translateZ(7px);
-
-  filter:
-    brightness(.94)
-    drop-shadow(
-      2px 6px 5px rgba(0,0,0,.40)
-    );
-}
-
-
-/* 左右 */
-
+.seat.top .tile3d,
 .seat.left .tile3d,
 .seat.right .tile3d {
   width: var(--tile-w);
   height: var(--river-tile-h);
 
+  /*
+   * 卓面から少し浮かせる。
+   *
+   * rotateX(-90deg)
+   * = 寝ている牌を立てる。
+   */
   transform:
-    translateZ(7px);
+    translateZ(8px)
+    rotateX(-90deg);
+
+  transform-origin:
+    center bottom;
 
   filter:
-    brightness(.97)
     drop-shadow(
-      2px 6px 5px rgba(0,0,0,.38)
+      2px 5px 4px rgba(0,0,0,.42)
     );
 }
 
 
-/*
- * 他家の牌面を少し卓面から浮かせる。
- */
+/* -------------------------
+   他家の表面
+   ------------------------- */
 
 .seat.top .tile3d > .tile-front,
 .seat.left .tile3d > .tile-front,
 .seat.right .tile3d > .tile-front {
+  visibility: visible !important;
+  opacity: 1 !important;
+
   transform:
     translateZ(
       calc(var(--tile-depth) / 2)
     ) !important;
-
-  visibility: visible !important;
-  opacity: 1 !important;
 }
 
 
-/* =========================================================
-   他家の手牌を「立っている」ようにする
-   ========================================================= */
+/* -------------------------
+   他家の裏面
+   ------------------------- */
+
+.seat.top .tile3d > .tile-back,
+.seat.left .tile3d > .tile-back,
+.seat.right .tile3d > .tile-back {
+  visibility: visible;
+}
+
+
+/* -------------------------
+   牌の6面を確実に描画
+   ------------------------- */
+
+.seat.top .tile3d > .tile-face,
+.seat.top .tile3d > .tile-front,
+.seat.left .tile3d > .tile-face,
+.seat.left .tile3d > .tile-front,
+.seat.right .tile3d > .tile-face,
+.seat.right .tile3d > .tile-front {
+  backface-visibility: visible;
+}
+
+
+/* -------------------------
+   手牌列
+   ------------------------- */
 
 /*
- * 牌そのものを90度回転させるのではなく、
- * hand-rowを少し傾ける。
+ * 以前の
  *
- * これなら牌の表面は消えず、
- * 6面構造も壊れない。
+ *   perspective(...)
+ *   rotateX(-10deg)
+ *
+ * は削除。
+ *
+ * 牌そのものが立っているので、
+ * rowを傾ける必要はない。
  */
 
 .seat.top .hand-row,
@@ -901,18 +923,21 @@ body {
 .seat.right .hand-row {
   position: relative;
 
-  transform:
-    perspective(700px)
-    rotateX(-10deg);
+  transform: none;
 
   transform-origin:
     center bottom;
+
+  /*
+   * 6面がrowの中でも維持されるようにする。
+   */
+  transform-style: preserve-3d;
 }
 
 
-/*
- * 接地影
- */
+/* -------------------------
+   接地影
+   ------------------------- */
 
 .seat.top .hand-row::after,
 .seat.left .hand-row::after,
@@ -924,15 +949,15 @@ body {
   left: 2%;
   right: 2%;
 
-  bottom: -7px;
+  bottom: -8px;
 
-  height: 8px;
+  height: 9px;
 
   background:
     radial-gradient(
       ellipse,
-      rgba(0,0,0,.52) 0%,
-      rgba(0,0,0,.25) 45%,
+      rgba(0,0,0,.55) 0%,
+      rgba(0,0,0,.28) 42%,
       transparent 75%
     );
 
@@ -941,6 +966,17 @@ body {
   pointer-events: none;
 
   z-index: -1;
+}
+
+
+/* -------------------------
+   他家の牌の接地調整
+   ------------------------- */
+
+.seat.top .tile3d,
+.seat.left .tile3d,
+.seat.right .tile3d {
+  margin-bottom: 0;
 }
 
 
