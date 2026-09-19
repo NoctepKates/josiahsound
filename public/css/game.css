@@ -1078,41 +1078,20 @@ body {
  * 牌自身だけを卓面から起こす。
  */
 
+/* =========================================================
+   他家の手牌：立った牌
+   ========================================================= */
 
-/* 対面 */
-
-.seat.top .hand-row .tile3d {
-  transform:
-    translateZ(6px)
-    rotateX(-90deg);
-  transform-origin:
-    center bottom;
-}
-
-
-/* 左家 */
-
-.seat.left .hand-row .tile3d {
-  transform:
-    translateZ(6px)
-    rotateX(-90deg);
-
-  transform-origin:
-    center bottom;
-}
-
-
-/* 右家 */
-
+.seat.top .hand-row .tile3d,
+.seat.left .hand-row .tile3d,
 .seat.right .hand-row .tile3d {
   transform:
     translateZ(6px)
-    rotateX(-90deg);
+    rotateX(-70deg);
 
   transform-origin:
     center bottom;
 }
-
 
 /* =========================================================
    他家の手牌列
