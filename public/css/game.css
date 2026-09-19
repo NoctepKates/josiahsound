@@ -1844,3 +1844,216 @@ body {
   align-items: center !important;
   justify-content: center !important;
 }
+
+/* =========================================================
+   コンパスを卓の完全中央に固定
+   ========================================================= */
+
+#compass {
+  position: absolute !important;
+
+  left: 50% !important;
+  top: 50% !important;
+
+  right: auto !important;
+  bottom: auto !important;
+
+  margin: 0 !important;
+
+  width: var(--compass-size) !important;
+  height: var(--compass-size) !important;
+
+  transform: translate(-50%, -50%) !important;
+}
+
+
+/* =========================================================
+   川とコンパスの間の隙間をなくす
+   ========================================================= */
+
+/*
+ * 上家・対面側。
+ *
+ * 上の川は scale(.84) されているので、
+ * 実際の高さは 5 * 42 * .84。
+ */
+.river.river-top {
+  top: calc(
+    50%
+    - var(--compass-size) / 2
+    - calc(5 * var(--river-tile-h) * .84)
+    - 4px
+  ) !important;
+
+  left: 50% !important;
+
+  transform:
+    translateX(-50%)
+    rotate(180deg)
+    scale(.84) !important;
+
+  transform-origin: center center !important;
+}
+
+
+/*
+ * 下家側の川。
+ * こちらは scale していないので、そのまま。
+ */
+.river.river-bottom {
+  top: calc(
+    50% + var(--compass-size) / 2
+  ) !important;
+
+  left: 50% !important;
+
+  transform: translateX(-50%) !important;
+
+  margin-top: 4px !important;
+}
+
+
+/*
+ * 右側の川。
+ * scale(.90) されるので実際の横幅を補正。
+ */
+.river.river-right {
+  left: calc(
+    50% + var(--compass-size) / 2
+  ) !important;
+
+  top: 50% !important;
+
+  transform:
+    translateY(-50%)
+    rotate(-90deg)
+    scale(.90) !important;
+
+  transform-origin: 0 50% !important;
+
+  margin-left: 4px !important;
+}
+
+
+/*
+ * 左側の川。
+ */
+.river.river-left {
+  left: calc(
+    50% - var(--compass-size) / 2
+  ) !important;
+
+  top: 50% !important;
+
+  transform:
+    translateY(-50%)
+    rotate(90deg)
+    scale(.90) !important;
+
+  transform-origin: 100% 50% !important;
+
+  margin-right: 4px !important;
+}
+
+
+/* =========================================================
+   残り枚数表示
+   ========================================================= */
+
+/*
+ * 中央セル自体を基準にする。
+ */
+#compass .cell-center {
+  position: relative !important;
+
+  grid-column: 2 !important;
+  grid-row: 2 !important;
+
+  margin: 5px !important;
+
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+
+  overflow: visible !important;
+}
+
+
+/*
+ * 「残り枚数」の表示枠。
+ *
+ * absolute を使わず、中央セルのflex中央に置く。
+ */
+#wallDigits {
+  position: static !important;
+
+  width: 100% !important;
+  height: 100% !important;
+
+  margin: 0 !important;
+  padding: 0 !important;
+
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+
+  transform: none !important;
+}
+
+
+/*
+ * 7セグ全体。
+ *
+ * ここでも absolute / translate を使わず、
+ * wallDigits のflex中央に置く。
+ */
+#wallDigits .digit-group {
+  position: static !important;
+
+  width: auto !important;
+  height: 34px !important;
+
+  margin: 0 !important;
+  padding: 0 !important;
+
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  justify-content: center !important;
+
+  gap: 5px !important;
+
+  transform: none !important;
+}
+
+
+/* =========================================================
+   自分の手牌
+   14枚の中心 = 卓の中心
+   ========================================================= */
+
+#seat-self {
+  position: absolute !important;
+
+  left: 50% !important;
+  bottom: 3% !important;
+
+  transform: translateX(-50%) !important;
+
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+}
+
+#hand-self {
+  position: relative !important;
+
+  left: auto !important;
+  right: auto !important;
+
+  display: flex !important;
+  justify-content: center !important;
+  align-items: flex-end !important;
+
+  transform: none !important;
+}
