@@ -1338,7 +1338,7 @@ body {
   transform:
     translateX(-50%);
 
-  margin-top: 4px;
+  margin-top: 0;
 }
 
 .river.river-top {
@@ -1346,8 +1346,7 @@ body {
     calc(
       50% -
       var(--compass-size) / 2 -
-      5 * var(--river-tile-h) -
-      4px
+      5 * var(--river-tile-h)
     );
 
   left: 50%;
@@ -1377,7 +1376,7 @@ body {
   transform:
     rotate(-90deg);
 
-  margin-left: 4px;
+  margin-left: 0;
 }
 
 .river.river-left {
@@ -1398,7 +1397,7 @@ body {
   transform:
     rotate(90deg);
 
-  margin-right: 4px;
+  margin-right: 0;
 }
 
 
