@@ -155,8 +155,7 @@ body {
   width: var(--compass-size);
   height: var(--compass-size);
 
-  transform:
-    translate(-50%, -50%);
+  transform: translate(-50%, -50%);
 
   z-index: 20;
 
@@ -275,6 +274,21 @@ body {
 
 .riichi-stick.active {
   opacity: 1;
+}
+
+#wallDigits {
+  display: flex;
+
+  align-items: center;
+  justify-content: center;
+
+  width: 100%;
+  height: 100%;
+
+  margin: 0;
+  padding: 0;
+
+  font-size: 0;
 }
 
 
@@ -502,7 +516,18 @@ body {
 }
 
 .seat.bottom .hand-row {
+  display: flex;
+
+  gap: var(--tile-gap);
+
+  min-height: 58px;
+
+  position: relative;
+
+  z-index: 41;
+
   transform: none !important;
+
   perspective: none !important;
 }
 
@@ -1107,6 +1132,40 @@ body {
   z-index: 30;
 }
 
+.river-block {
+  position: absolute;
+
+  top: 0;
+  left: 0;
+
+  display: grid;
+
+  grid-template-columns:
+    repeat(6, var(--tile-w));
+
+  grid-template-rows:
+    repeat(5, var(--river-tile-h));
+
+  column-gap: var(--tile-gap);
+  row-gap: 0;
+
+  width:
+    calc(
+      6 * var(--tile-w) +
+      5 * var(--tile-gap)
+    );
+
+  height:
+    calc(
+      5 * var(--river-tile-h)
+    );
+
+  filter:
+    drop-shadow(
+      0 5px 5px rgba(0,0,0,.25)
+    );
+}
+
 
 /* 河の内部ブロック */
 
@@ -1185,7 +1244,6 @@ body {
   margin-top: 4px;
 }
 
-
 .river.river-top {
   top:
     calc(
@@ -1205,7 +1263,6 @@ body {
   transform-origin:
     center center;
 }
-
 
 .river.river-right {
   left:
@@ -1229,7 +1286,6 @@ body {
 
   margin-left: 4px;
 }
-
 
 .river.river-left {
   left:
@@ -1335,10 +1391,11 @@ body {
 .seat.bottom {
   position: absolute;
 
-  left: 3%;
+  left: 50%;
   bottom: 3%;
 
-  transform: none !important;
+  transform:
+    translateX(-50%) !important;
 
   display: flex;
   flex-direction: column;
@@ -1444,616 +1501,4 @@ body {
 .player-tag.corner-r3 {
   bottom: 8px;
   right: 8px;
-}
-
-
-/* =========================================================
-   自分の手牌の横並び
-   ========================================================= */
-
-.seat.bottom .hand-row {
-  display: flex;
-
-  gap: var(--tile-gap);
-
-  min-height: 58px;
-
-  position: relative;
-
-  z-index: 41;
-
-  transform: none !important;
-
-  perspective: none !important;
-}
-
-
-/* =========================================================
-   自分の牌
-   ========================================================= */
-
-.seat.bottom .hand-row .tile3d {
-  flex: 0 0 auto;
-
-  transform:
-    translateZ(3px);
-}
-
-
-/* 選択牌 */
-
-.seat.bottom .hand-row .tile3d > .tile-front.selected {
-  transform:
-    translateZ(
-      calc(var(--tile-depth) / 2)
-    )
-    translateY(-11px);
-}
-
-/* =========================================================
-   卓全体の位置
-   ========================================================= */
-
-/*
- * table-wrap 自体を通常のレイアウト位置から上へ移動。
- * margin ではなく transform の translateY を使う。
- */
-.table-wrap {
-  top: 0 !important;
-
-  transform:
-    perspective(831px)
-    rotateX(26deg)
-    translateY(-128px) !important;
-}
-
-
-/* =========================================================
-   自分の手牌
-   ========================================================= */
-
-/*
- * 座席そのものではなく、手牌列を直接右へ。
- */
-#seat-self {
-  left: 3% !important;
-  bottom: 3% !important;
-}
-
-#hand-self {
-  position: relative !important;
-  left: 256px !important;
-}
-
-
-/* 鳴き牌も同じだけ右へ */
-#meld-self {
-  position: relative !important;
-  left: 256px !important;
-}
-
-/* =========================================
-   残り枚数：7セグ表示
-   3D卓の影響を受けない完全2D表示
-   ========================================= */
-
-#wallDigits {
-  position: relative !important;
-  display: flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-
-  width: 100% !important;
-  height: 100% !important;
-
-  transform: none !important;
-  transform-style: flat !important;
-
-  font-size: 0 !important;
-  line-height: 1 !important;
-
-  overflow: visible !important;
-}
-
-#wallDigits::before,
-#wallDigits::after {
-  display: none !important;
-  content: none !important;
-}
-
-/* 2桁全体 */
-#wallDigits .digit-group {
-  display: flex !important;
-  flex-direction: row !important;
-  align-items: center !important;
-  justify-content: center !important;
-
-  gap: 5px !important;
-
-  width: auto !important;
-  height: 34px !important;
-
-  transform: none !important;
-  transform-style: flat !important;
-}
-
-/* 1桁 */
-#wallDigits .digit {
-  position: relative !important;
-
-  width: 20px !important;
-  height: 34px !important;
-
-  flex: 0 0 20px !important;
-
-  transform: none !important;
-  transform-style: flat !important;
-
-  overflow: visible !important;
-}
-
-/* セグメント共通 */
-#wallDigits .seg {
-  position: absolute !important;
-
-  display: block !important;
-
-  margin: 0 !important;
-  padding: 0 !important;
-
-  width: 14px !important;
-  height: 4px !important;
-
-  border-radius: 2px !important;
-
-  background: transparent !important;
-
-  transform: none !important;
-  transform-origin: center center !important;
-
-  box-shadow: none !important;
-
-  pointer-events: none !important;
-}
-
-/* 点灯 */
-#wallDigits .seg.on {
-  background: #f3d78a !important;
-  box-shadow:
-    0 0 3px rgba(243,215,138,.8),
-    0 0 6px rgba(243,215,138,.35) !important;
-}
-
-/* 上 */
-#wallDigits .seg-a {
-  left: 3px !important;
-  top: 0 !important;
-}
-
-/* 右上 */
-#wallDigits .seg-b {
-  right: 0 !important;
-  top: 3px !important;
-
-  width: 4px !important;
-  height: 12px !important;
-}
-
-/* 右下 */
-#wallDigits .seg-c {
-  right: 0 !important;
-  bottom: 3px !important;
-
-  width: 4px !important;
-  height: 12px !important;
-}
-
-/* 下 */
-#wallDigits .seg-d {
-  left: 3px !important;
-  bottom: 0 !important;
-}
-
-/* 左下 */
-#wallDigits .seg-e {
-  left: 0 !important;
-  bottom: 3px !important;
-
-  width: 4px !important;
-  height: 12px !important;
-}
-
-/* 左上 */
-#wallDigits .seg-f {
-  left: 0 !important;
-  top: 3px !important;
-
-  width: 4px !important;
-  height: 12px !important;
-}
-
-/* 中央 */
-#wallDigits .seg-g {
-  left: 3px !important;
-  top: 15px !important;
-}
-
-/* =========================================
-   コンパス中央の残り枚数表示位置
-   ========================================= */
-
-/* コンパス本体 */
-#compass {
-  position: absolute !important;
-  top: 50% !important;
-  left: 50% !important;
-
-  width: var(--compass-size) !important;
-  height: var(--compass-size) !important;
-
-  transform: translate(-50%, -50%) !important;
-
-  transform-style: preserve-3d !important;
-}
-
-/* 中央セルそのもの */
-#compass .cell-center {
-  grid-column: 2 !important;
-  grid-row: 2 !important;
-
-  margin: 5px !important;
-
-  position: relative !important;
-
-  display: flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-
-  overflow: visible !important;
-}
-
-/* 残り枚数表示枠 */
-#wallDigits {
-  position: absolute !important;
-
-  left: 5px !important;
-  right: 5px !important;
-  top: 5px !important;
-  bottom: 5px !important;
-
-  width: auto !important;
-  height: auto !important;
-
-  margin: 0 !important;
-  padding: 0 !important;
-
-  display: flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-
-  transform: none !important;
-}
-
-/* 7セグ本体を中央セルのど真ん中へ */
-#wallDigits .digit-group {
-  position: absolute !important;
-
-  left: 50% !important;
-  top: 50% !important;
-
-  width: auto !important;
-  height: 34px !important;
-
-  transform: translate(-50%, -50%) !important;
-
-  display: flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-}
-
-/* =========================================
-   自分の手牌：14枚の中心を卓のX=0にする
-   ========================================= */
-
-#seat-self {
-  position: absolute !important;
-
-  left: 50% !important;
-  bottom: 3% !important;
-
-  /*
-   * seat-self 自体の中心を卓の中央X=0へ
-   */
-  transform: translateX(-50%) !important;
-
-  display: flex !important;
-  flex-direction: column !important;
-  align-items: center !important;
-}
-
-/*
- * 手牌そのものも中央揃え
- */
-#hand-self {
-  position: relative !important;
-
-  left: auto !important;
-  right: auto !important;
-
-  display: flex !important;
-  justify-content: center !important;
-  align-items: flex-end !important;
-
-  transform: none !important;
-}
-
-
-/* =========================================
-   コンパス：卓の完全な中央
-   ========================================= */
-
-#compass {
-  position: absolute !important;
-
-  left: 50% !important;
-  top: 50% !important;
-
-  right: auto !important;
-  bottom: auto !important;
-
-  margin: 0 !important;
-
-  transform: translate(-50%, -50%) !important;
-}
-
-
-/*
- * 中央セルもコンパス中央からずらさない
- */
-#compass .cell-center {
-  grid-column: 2 !important;
-  grid-row: 2 !important;
-
-  margin: 5px !important;
-
-  position: relative !important;
-}
-
-
-/*
- * 残り枚数の表示枠は中央セルの中央
- */
-#wallDigits {
-  position: absolute !important;
-
-  left: 50% !important;
-  top: 50% !important;
-
-  right: auto !important;
-  bottom: auto !important;
-
-  width: 90% !important;
-  height: 70% !important;
-
-  margin: 0 !important;
-  padding: 0 !important;
-
-  transform: translate(-50%, -50%) !important;
-
-  display: flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-}
-
-/* =========================================================
-   コンパスを卓の完全中央に固定
-   ========================================================= */
-
-#compass {
-  position: absolute !important;
-
-  left: 50% !important;
-  top: 50% !important;
-
-  right: auto !important;
-  bottom: auto !important;
-
-  margin: 0 !important;
-
-  width: var(--compass-size) !important;
-  height: var(--compass-size) !important;
-
-  transform: translate(-50%, -50%) !important;
-}
-
-
-/* =========================================================
-   川とコンパスの間の隙間をなくす
-   ========================================================= */
-
-/*
- * 上家・対面側。
- *
- * 上の川は scale(.84) されているので、
- * 実際の高さは 5 * 42 * .84。
- */
-.river.river-top {
-  top: calc(
-    50%
-    - var(--compass-size) / 2
-    - calc(5 * var(--river-tile-h) * .84)
-    - 4px
-  ) !important;
-
-  left: 50% !important;
-
-  transform:
-    translateX(-50%)
-    rotate(180deg)
-    scale(.84) !important;
-
-  transform-origin: center center !important;
-}
-
-
-/*
- * 下家側の川。
- * こちらは scale していないので、そのまま。
- */
-.river.river-bottom {
-  top: calc(
-    50% + var(--compass-size) / 2
-  ) !important;
-
-  left: 50% !important;
-
-  transform: translateX(-50%) !important;
-
-  margin-top: 4px !important;
-}
-
-
-/*
- * 右側の川。
- * scale(.90) されるので実際の横幅を補正。
- */
-.river.river-right {
-  left: calc(
-    50% + var(--compass-size) / 2
-  ) !important;
-
-  top: 50% !important;
-
-  transform:
-    translateY(-50%)
-    rotate(-90deg)
-    scale(.90) !important;
-
-  transform-origin: 0 50% !important;
-
-  margin-left: 4px !important;
-}
-
-
-/*
- * 左側の川。
- */
-.river.river-left {
-  left: calc(
-    50% - var(--compass-size) / 2
-  ) !important;
-
-  top: 50% !important;
-
-  transform:
-    translateY(-50%)
-    rotate(90deg)
-    scale(.90) !important;
-
-  transform-origin: 100% 50% !important;
-
-  margin-right: 4px !important;
-}
-
-
-/* =========================================================
-   残り枚数表示
-   ========================================================= */
-
-/*
- * 中央セル自体を基準にする。
- */
-#compass .cell-center {
-  position: relative !important;
-
-  grid-column: 2 !important;
-  grid-row: 2 !important;
-
-  margin: 5px !important;
-
-  display: flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-
-  overflow: visible !important;
-}
-
-
-/*
- * 「残り枚数」の表示枠。
- *
- * absolute を使わず、中央セルのflex中央に置く。
- */
-#wallDigits {
-  position: static !important;
-
-  width: 100% !important;
-  height: 100% !important;
-
-  margin: 0 !important;
-  padding: 0 !important;
-
-  display: flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-
-  transform: none !important;
-}
-
-
-/*
- * 7セグ全体。
- *
- * ここでも absolute / translate を使わず、
- * wallDigits のflex中央に置く。
- */
-#wallDigits .digit-group {
-  position: static !important;
-
-  width: auto !important;
-  height: 34px !important;
-
-  margin: 0 !important;
-  padding: 0 !important;
-
-  display: flex !important;
-  flex-direction: row !important;
-  align-items: center !important;
-  justify-content: center !important;
-
-  gap: 5px !important;
-
-  transform: none !important;
-}
-
-
-/* =========================================================
-   自分の手牌
-   14枚の中心 = 卓の中心
-   ========================================================= */
-
-#seat-self {
-  position: absolute !important;
-
-  left: 50% !important;
-  bottom: 3% !important;
-
-  transform: translateX(-50%) !important;
-
-  display: flex !important;
-  flex-direction: column !important;
-  align-items: center !important;
-}
-
-#hand-self {
-  position: relative !important;
-
-  left: auto !important;
-  right: auto !important;
-
-  display: flex !important;
-  justify-content: center !important;
-  align-items: flex-end !important;
-
-  transform: none !important;
 }
