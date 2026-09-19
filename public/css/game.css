@@ -1082,12 +1082,48 @@ body {
    他家の手牌：立った牌
    ========================================================= */
 
-.seat.top .hand-row .tile3d,
-.seat.left .hand-row .tile3d,
-.seat.right .hand-row .tile3d {
+/*
+ * 重要な訂正:
+ *
+ * 座席自体には
+ *   対面  = rotateZ(180deg)
+ *   右家  = rotateZ(-90deg)
+ *   左家  = rotateZ(90deg)
+ * が既にかかっている。
+ *
+ * 180度回転はローカルX/Y軸を反転させるだけなので、
+ * 対面はそのまま rotateX で「立ち上がる」動きになる。
+ *
+ * しかし±90度回転は子要素のローカルX軸とY軸を
+ * 入れ替えてしまうため、右家・左家に rotateX を使うと
+ * 実際には画面上で横方向(rotateY相当)に倒れてしまい、
+ * 伸びる方向も陰影が乗る面も対面とズレる。
+ *
+ * → 右家・左家だけ rotateY を使う。
+ */
+
+.seat.top .hand-row .tile3d {
   transform:
     translateZ(6px)
     rotateX(-70deg);
+
+  transform-origin:
+    center bottom;
+}
+
+.seat.right .hand-row .tile3d {
+  transform:
+    translateZ(6px)
+    rotateY(70deg);
+
+  transform-origin:
+    center bottom;
+}
+
+.seat.left .hand-row .tile3d {
+  transform:
+    translateZ(6px)
+    rotateY(-70deg);
 
   transform-origin:
     center bottom;
@@ -1207,76 +1243,7 @@ body {
   z-index: 30;
 }
 
-.river-block {
-  position: absolute;
-
-  top: 0;
-  left: 0;
-
-  display: grid;
-
-  grid-template-columns:
-    repeat(6, var(--tile-w));
-
-  grid-template-rows:
-    repeat(5, var(--river-tile-h));
-
-  column-gap: var(--tile-gap);
-  row-gap: 0;
-
-  width:
-    calc(
-      6 * var(--tile-w) +
-      5 * var(--tile-gap)
-    );
-
-  height:
-    calc(
-      5 * var(--river-tile-h)
-    );
-
-  filter:
-    drop-shadow(
-      0 5px 5px rgba(0,0,0,.25)
-    );
-}
-
-
-/* 河の内部ブロック */
-
-.river-block {
-  position: absolute;
-
-  top: 0;
-  left: 0;
-
-  display: grid;
-
-  grid-template-columns:
-    repeat(6, var(--tile-w));
-
-  grid-template-rows:
-    repeat(5, var(--river-tile-h));
-
-  column-gap: var(--tile-gap);
-  row-gap: 0;
-
-  width:
-    calc(
-      6 * var(--tile-w) +
-      5 * var(--tile-gap)
-    );
-
-  height:
-    calc(
-      5 * var(--river-tile-h)
-    );
-
-  filter:
-    drop-shadow(
-      0 5px 5px rgba(0,0,0,.25)
-    );
-}
+/* 河の内部ブロック(上のブロックと完全重複していたので1つに統合) */
 
 
 /*
