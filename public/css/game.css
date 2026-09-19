@@ -1677,3 +1677,76 @@ body {
   left: 3px !important;
   top: 15px !important;
 }
+
+/* =========================================
+   コンパス中央の残り枚数表示位置
+   ========================================= */
+
+/* コンパス本体 */
+#compass {
+  position: absolute !important;
+  top: 50% !important;
+  left: 50% !important;
+
+  width: var(--compass-size) !important;
+  height: var(--compass-size) !important;
+
+  transform: translate(-50%, -50%) !important;
+
+  transform-style: preserve-3d !important;
+}
+
+/* 中央セルそのもの */
+#compass .cell-center {
+  grid-column: 2 !important;
+  grid-row: 2 !important;
+
+  margin: 5px !important;
+
+  position: relative !important;
+
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+
+  overflow: visible !important;
+}
+
+/* 残り枚数表示枠 */
+#wallDigits {
+  position: absolute !important;
+
+  left: 5px !important;
+  right: 5px !important;
+  top: 5px !important;
+  bottom: 5px !important;
+
+  width: auto !important;
+  height: auto !important;
+
+  margin: 0 !important;
+  padding: 0 !important;
+
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+
+  transform: none !important;
+}
+
+/* 7セグ本体を中央セルのど真ん中へ */
+#wallDigits .digit-group {
+  position: absolute !important;
+
+  left: 50% !important;
+  top: 50% !important;
+
+  width: auto !important;
+  height: 34px !important;
+
+  transform: translate(-50%, -50%) !important;
+
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
