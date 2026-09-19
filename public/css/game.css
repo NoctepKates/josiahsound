@@ -1063,8 +1063,8 @@ body {
  *
  * 座席自体には既に
  *
- *   左家  = rotate(90deg)
- *   右家  = rotate(-90deg)
+ *   下家  = rotate(90deg)
+ *   上家  = rotate(-90deg)
  *   対面  = rotate(180deg)
  *
  * が設定されている。
@@ -1087,19 +1087,19 @@ body {
  *
  * 座席自体には
  *   対面  = rotateZ(180deg)
- *   右家  = rotateZ(-90deg)
- *   左家  = rotateZ(90deg)
+ *   上家  = rotateZ(-90deg)
+ *   下家  = rotateZ(90deg)
  * が既にかかっている。
  *
  * 180度回転はローカルX/Y軸を反転させるだけなので、
  * 対面はそのまま rotateX で「立ち上がる」動きになる。
  *
  * しかし±90度回転は子要素のローカルX軸とY軸を
- * 入れ替えてしまうため、右家・左家に rotateX を使うと
+ * 入れ替えてしまうため、上家・下家に rotateX を使うと
  * 実際には画面上で横方向(rotateY相当)に倒れてしまい、
  * 伸びる方向も陰影が乗る面も対面とズレる。
  *
- * → 右家・左家だけ rotateY を使う。
+ * → 上家・下家だけ rotateY を使う。
  */
 
 .seat.top .hand-row .tile3d {
@@ -1440,7 +1440,7 @@ body {
 }
 
 
-/* 右家 */
+/* 上家 */
 
 .seat.right {
   position: absolute;
@@ -1476,7 +1476,7 @@ body {
 }
 
 
-/* 左家 */
+/* 下家 */
 
 .seat.left {
   position: absolute;
@@ -1515,7 +1515,7 @@ body {
 }
 
 
-/* 右家 */
+/* 上家 */
 
 .player-tag.corner-r1 {
   top: 8px;
@@ -1531,7 +1531,7 @@ body {
 }
 
 
-/* 左家 */
+/* 下家 */
 
 .player-tag.corner-r3 {
   bottom: 8px;
