@@ -1522,14 +1522,14 @@ body {
 
 #hand-self {
   position: relative !important;
-  left: 100px !important;
+  left: 256px !important;
 }
 
 
 /* 鳴き牌も同じだけ右へ */
 #meld-self {
   position: relative !important;
-  left: 100px !important;
+  left: 256px !important;
 }
 
 /* =========================================
@@ -1743,6 +1743,100 @@ body {
 
   width: auto !important;
   height: 34px !important;
+
+  transform: translate(-50%, -50%) !important;
+
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+/* =========================================
+   自分の手牌：14枚の中心を卓のX=0にする
+   ========================================= */
+
+#seat-self {
+  position: absolute !important;
+
+  left: 50% !important;
+  bottom: 3% !important;
+
+  /*
+   * seat-self 自体の中心を卓の中央X=0へ
+   */
+  transform: translateX(-50%) !important;
+
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+}
+
+/*
+ * 手牌そのものも中央揃え
+ */
+#hand-self {
+  position: relative !important;
+
+  left: auto !important;
+  right: auto !important;
+
+  display: flex !important;
+  justify-content: center !important;
+  align-items: flex-end !important;
+
+  transform: none !important;
+}
+
+
+/* =========================================
+   コンパス：卓の完全な中央
+   ========================================= */
+
+#compass {
+  position: absolute !important;
+
+  left: 50% !important;
+  top: 50% !important;
+
+  right: auto !important;
+  bottom: auto !important;
+
+  margin: 0 !important;
+
+  transform: translate(-50%, -50%) !important;
+}
+
+
+/*
+ * 中央セルもコンパス中央からずらさない
+ */
+#compass .cell-center {
+  grid-column: 2 !important;
+  grid-row: 2 !important;
+
+  margin: 5px !important;
+
+  position: relative !important;
+}
+
+
+/*
+ * 残り枚数の表示枠は中央セルの中央
+ */
+#wallDigits {
+  position: absolute !important;
+
+  left: 50% !important;
+  top: 50% !important;
+
+  right: auto !important;
+  bottom: auto !important;
+
+  width: 90% !important;
+  height: 70% !important;
+
+  margin: 0 !important;
+  padding: 0 !important;
 
   transform: translate(-50%, -50%) !important;
 
