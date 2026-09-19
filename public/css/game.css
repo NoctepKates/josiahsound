@@ -605,38 +605,38 @@ body {
   transform-style: preserve-3d;
 }
 
+/*
+ * .seat は position:absolute なので、
+ * 各座席の基準位置を明示する。
+ *
+ * 河・コンパスには触れない。
+ */
+
 
 /* 自分 */
 
 .seat.bottom {
-  transform: none !important;
-}
+  position: absolute;
 
-.seat.bottom .hand-row {
-  display: flex;
+  left: 50%;
+  bottom: 3%;
 
-  gap: var(--tile-gap);
-
-  min-height: 58px;
-
-  position: relative;
-
-  z-index: 41;
-
-  transform: none !important;
-
-  perspective: none !important;
-}
-
-.seat.bottom .tile3d {
   transform:
-    translateZ(3px) !important;
+    translateX(-50%) !important;
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+
+  z-index: 40;
 }
 
 
-/* 右 */
+/* 右家 */
 
 .seat.right {
+  position: absolute;
+
   right: 1.5%;
   top: 50%;
 
@@ -645,12 +645,16 @@ body {
     rotate(-90deg);
 
   transform-origin: center center;
+
+  z-index: 40;
 }
 
 
 /* 対面 */
 
 .seat.top {
+  position: absolute;
+
   top: 3%;
   left: 50%;
 
@@ -659,12 +663,16 @@ body {
     rotate(180deg);
 
   transform-origin: center center;
+
+  z-index: 40;
 }
 
 
-/* 左 */
+/* 左家 */
 
 .seat.left {
+  position: absolute;
+
   left: 1.5%;
   top: 50%;
 
@@ -673,8 +681,9 @@ body {
     rotate(90deg);
 
   transform-origin: center center;
-}
 
+  z-index: 40;
+}
 
 .hand-row {
   display: flex;
@@ -756,6 +765,18 @@ body {
   height: var(--river-tile-h);
 
   flex: 0 0 auto;
+
+  /*
+   * この牌専用の視点(perspective)を持たせる。
+   * こうすることで、卓のどの位置に置かれていても、
+   * また座席がどれだけ回転していても、
+   * 牌自身の見た目(奥行き・歪み方)は常に一定になる。
+   * 卓全体で1つの消失点を共有すると、卓の端に行くほど
+   * (特に90度回転している左右の座席で)歪みが大きくなり、
+   * 手前の牌ほど潰れて線のようになってしまう。
+   */
+  perspective: 220px;
+  perspective-origin: 50% 100%;
 
   transform-style: preserve-3d;
   transform-origin: center bottom;
@@ -1063,8 +1084,8 @@ body {
  *
  * 座席自体には既に
  *
- *   下家  = rotate(90deg)
- *   上家  = rotate(-90deg)
+ *   左家  = rotate(90deg)
+ *   右家  = rotate(-90deg)
  *   対面  = rotate(180deg)
  *
  * が設定されている。
@@ -1083,47 +1104,34 @@ body {
    ========================================================= */
 
 /*
- * 重要な訂正:
+ * 訂正の訂正:
  *
  * 座席自体には
  *   対面  = rotateZ(180deg)
- *   上家  = rotateZ(-90deg)
- *   下家  = rotateZ(90deg)
+ *   右家  = rotateZ(-90deg)
+ *   左家  = rotateZ(90deg)
  * が既にかかっている。
  *
- * 180度回転はローカルX/Y軸を反転させるだけなので、
- * 対面はそのまま rotateX で「立ち上がる」動きになる。
+ * 牌の並び(.hand-row, display:flex)は常に
+ * 「牌自身のローカルX軸」方向に並んでいるので、
+ * rotateX は常に「自分の並び方向を軸に起き上がる」
+ * 正しい回転になる。座席のrotateZが何度であっても、
+ * 起き上がる動きごと一緒に回転して持っていかれるため、
+ * 軸を rotateY に切り替える必要はない(むしろ壊れる)。
  *
- * しかし±90度回転は子要素のローカルX軸とY軸を
- * 入れ替えてしまうため、上家・下家に rotateX を使うと
- * 実際には画面上で横方向(rotateY相当)に倒れてしまい、
- * 伸びる方向も陰影が乗る面も対面とズレる。
+ * → 対面・右家・左家、全員同じ rotateX(-70deg) でよい。
  *
- * → 上家・下家だけ rotateY を使う。
+ * 「近づくほど潰れて線になる」問題の正体は回転軸ではなく、
+ * 卓全体で消失点(perspective)を1つ共有していたこと。
+ * これは .tile3d 自身に perspective を持たせて解決済み。
  */
 
-.seat.top .hand-row .tile3d {
-  transform:
-    translateZ(6px)
-    rotateX(-70deg);
-
-  transform-origin:
-    center bottom;
-}
-
-.seat.right .hand-row .tile3d {
-  transform:
-    translateZ(6px)
-    rotateY(70deg);
-
-  transform-origin:
-    center bottom;
-}
-
+.seat.top .hand-row .tile3d,
+.seat.right .hand-row .tile3d,
 .seat.left .hand-row .tile3d {
   transform:
     translateZ(6px)
-    rotateY(-70deg);
+    rotateX(-90deg);
 
   transform-origin:
     center bottom;
@@ -1409,90 +1417,6 @@ body {
   pointer-events: auto;
 }
 
-/* =========================================================
-   座席位置の復元
-   ========================================================= */
-
-/*
- * .seat は position:absolute なので、
- * 各座席の基準位置を明示する。
- *
- * 河・コンパスには触れない。
- */
-
-
-/* 自分 */
-
-.seat.bottom {
-  position: absolute;
-
-  left: 50%;
-  bottom: 3%;
-
-  transform:
-    translateX(-50%) !important;
-
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-
-  z-index: 40;
-}
-
-
-/* 上家 */
-
-.seat.right {
-  position: absolute;
-
-  right: 1.5%;
-  top: 50%;
-
-  transform:
-    translate(50%, -50%)
-    rotate(-90deg);
-
-  transform-origin: center center;
-
-  z-index: 40;
-}
-
-
-/* 対面 */
-
-.seat.top {
-  position: absolute;
-
-  top: 3%;
-  left: 50%;
-
-  transform:
-    translateX(-50%)
-    rotate(180deg);
-
-  transform-origin: center center;
-
-  z-index: 40;
-}
-
-
-/* 下家 */
-
-.seat.left {
-  position: absolute;
-
-  left: 1.5%;
-  top: 50%;
-
-  transform:
-    translate(-50%, -50%)
-    rotate(90deg);
-
-  transform-origin: center center;
-
-  z-index: 40;
-}
-
 
 /* =========================================================
    プレイヤー名の位置
@@ -1515,7 +1439,7 @@ body {
 }
 
 
-/* 上家 */
+/* 右家 */
 
 .player-tag.corner-r1 {
   top: 8px;
@@ -1531,7 +1455,7 @@ body {
 }
 
 
-/* 下家 */
+/* 左家 */
 
 .player-tag.corner-r3 {
   bottom: 8px;
