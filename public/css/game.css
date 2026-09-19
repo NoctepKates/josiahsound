@@ -52,12 +52,10 @@ body {
     inset 0 0 0 2px rgba(244, 214, 145, .22),
     inset 0 0 35px rgba(0, 0, 0, .42);
 
-  /*
-   * 手前のプレイヤーから卓を見下ろす視点
-   */
   transform:
     perspective(831px)
-    rotateX(26deg);
+    rotateX(26deg)
+    translateY(-60px);
 
   transform-origin: 50% 58%;
 
@@ -291,6 +289,105 @@ body {
   font-size: 0;
 }
 
+#wallDigits .digit-group {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+
+  gap: 5px;
+
+  width: auto;
+  height: 34px;
+
+  transform: none;
+}
+
+#wallDigits .digit {
+  position: relative;
+
+  width: 20px;
+  height: 34px;
+
+  flex: 0 0 20px;
+
+  transform: none;
+}
+
+#wallDigits .seg {
+  position: absolute;
+
+  display: block;
+
+  margin: 0;
+  padding: 0;
+
+  width: 14px;
+  height: 4px;
+
+  border-radius: 2px;
+
+  background: transparent;
+
+  transform: none;
+
+  pointer-events: none;
+}
+
+#wallDigits .seg.on {
+  background: #f3d78a;
+
+  box-shadow:
+    0 0 3px rgba(243,215,138,.8),
+    0 0 6px rgba(243,215,138,.35);
+}
+
+#wallDigits .seg-a {
+  left: 3px;
+  top: 0;
+}
+
+#wallDigits .seg-b {
+  right: 0;
+  top: 3px;
+
+  width: 4px;
+  height: 12px;
+}
+
+#wallDigits .seg-c {
+  right: 0;
+  bottom: 3px;
+
+  width: 4px;
+  height: 12px;
+}
+
+#wallDigits .seg-d {
+  left: 3px;
+  bottom: 0;
+}
+
+#wallDigits .seg-e {
+  left: 0;
+  bottom: 3px;
+
+  width: 4px;
+  height: 12px;
+}
+
+#wallDigits .seg-f {
+  left: 0;
+  top: 3px;
+
+  width: 4px;
+  height: 12px;
+}
+
+#wallDigits .seg-g {
+  left: 3px;
+  top: 15px;
+}
 
 /* =========================================================
    牌
@@ -1257,11 +1354,9 @@ body {
 
   transform:
     translateX(-50%)
-    rotate(180deg)
-    scale(.84);
+    rotate(180deg);
 
-  transform-origin:
-    center center;
+  transform-origin: center center;
 }
 
 .river.river-right {
@@ -1277,12 +1372,10 @@ body {
       var(--compass-size) / 2
     );
 
-  transform-origin:
-    0 0;
+  transform-origin: 0 0;
 
   transform:
-    rotate(-90deg)
-    scale(.90);
+    rotate(-90deg);
 
   margin-left: 4px;
 }
@@ -1300,12 +1393,10 @@ body {
       var(--compass-size) / 2
     );
 
-  transform-origin:
-    0 0;
+  transform-origin: 0 0;
 
   transform:
-    rotate(90deg)
-    scale(.90);
+    rotate(90deg);
 
   margin-right: 4px;
 }
