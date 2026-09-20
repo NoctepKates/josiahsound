@@ -401,12 +401,20 @@ body {
   border: 1px solid var(--tile-side-mid);
   border-radius: 5px 5px 4px 4px;
 
+  /*
+   * ハイライトは円形(radial)グラデーションにする。
+   * 直線(linear)グラデーションは「115deg」のように
+   * 画面上の固定方向を向いてしまうため、3D回転している
+   * 牌ではその回転具合によって光の入り方がバラバラに
+   * ずれてしまう。円形グラデーションには方向という概念が
+   * 無いので、牌がどれだけ回転していても常に同じに見える。
+   */
   background:
-    linear-gradient(
-      115deg,
-      rgba(255,255,255,.82) 0%,
-      rgba(255,255,255,.30) 15%,
-      rgba(255,255,255,0) 36%
+    radial-gradient(
+      ellipse 75% 55% at 50% 28%,
+      rgba(255,255,255,.78) 0%,
+      rgba(255,255,255,.28) 42%,
+      rgba(255,255,255,0) 72%
     ),
     linear-gradient(
       180deg,
@@ -868,10 +876,10 @@ body {
   border-radius: 5px;
 
   background:
-    linear-gradient(
-      135deg,
-      rgba(255,255,255,.18),
-      transparent 35%
+    radial-gradient(
+      ellipse 75% 55% at 50% 28%,
+      rgba(255,255,255,.22) 0%,
+      rgba(255,255,255,0) 55%
     ),
     repeating-linear-gradient(
       45deg,
@@ -906,9 +914,20 @@ body {
 
   border: 1px solid var(--tile-side-dark);
 
+  /*
+   * 側面4枚(上下左右)は全部この同じグラデーションにする。
+   *
+   * 天井から真上に光がある想定なら、箱のどの側面(東西南北)を
+   * 向いていても、光源に対する角度の違いはほぼ無く、
+   * 「厚みの中でどちらが箱の上側/下側にあたるか」だけが効く。
+   * 座席の回転(0/90/180/-90度)によって画面上でどちらの
+   * 向きになるかは変わるが、面自体の明暗のルールは
+   * 4面とも同じにしておくのが、回転してもおかしくならない
+   * 安全な作り方。
+   */
   background:
     linear-gradient(
-      90deg,
+      180deg,
       var(--tile-side-light) 0%,
       var(--tile-side-mid) 55%,
       var(--tile-side-dark) 100%
@@ -942,9 +961,10 @@ body {
 
   border: 1px solid var(--tile-side-dark);
 
+  /* 左側面と同じ理由で、同じグラデーションを使う */
   background:
     linear-gradient(
-      90deg,
+      180deg,
       var(--tile-side-light) 0%,
       var(--tile-side-mid) 55%,
       var(--tile-side-dark) 100%
@@ -978,11 +998,12 @@ body {
 
   border: 1px solid var(--tile-side-dark);
 
+  /* 左右側面と同じグラデーションで統一 */
   background:
     linear-gradient(
       180deg,
-      var(--tile-face-top) 0%,
-      var(--tile-side-mid) 70%,
+      var(--tile-side-light) 0%,
+      var(--tile-side-mid) 55%,
       var(--tile-side-dark) 100%
     );
 
@@ -1014,11 +1035,13 @@ body {
 
   border: 1px solid var(--tile-side-dark);
 
+  /* 左右・上面と同じグラデーションで統一 */
   background:
     linear-gradient(
       180deg,
-      var(--tile-side-mid),
-      var(--tile-side-dark)
+      var(--tile-side-light) 0%,
+      var(--tile-side-mid) 55%,
+      var(--tile-side-dark) 100%
     );
 
   transform:
@@ -1203,10 +1226,10 @@ body {
   color: transparent;
 
   background:
-    linear-gradient(
-      135deg,
-      rgba(255,255,255,.14),
-      transparent 30%
+    radial-gradient(
+      ellipse 75% 55% at 50% 28%,
+      rgba(255,255,255,.20) 0%,
+      rgba(255,255,255,0) 55%
     ),
     repeating-linear-gradient(
       45deg,
