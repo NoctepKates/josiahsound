@@ -859,6 +859,17 @@ body {
 }
 
 
+/*
+ * 2D時代の疑似ベベル(box-shadowで左上を明るく・右下に影を
+ * 段々重ねて立体に見せていたやつ)を、3D化した表面では消す。
+ * 今は本物の6面体があるので、この固定方向の縁取りは不要になった上、
+ * 回転すると「白い面がどんどん増える」ように見える原因そのものだった。
+ */
+.tile3d > .tile-front {
+  box-shadow: none;
+}
+
+
 /* =========================================================
    裏面
    ========================================================= */
@@ -875,19 +886,8 @@ body {
   border: 1px solid #243f3b;
   border-radius: 5px;
 
-  background:
-    radial-gradient(
-      ellipse 75% 55% at 50% 28%,
-      rgba(255,255,255,.22) 0%,
-      rgba(255,255,255,0) 55%
-    ),
-    repeating-linear-gradient(
-      45deg,
-      #315c56 0px,
-      #315c56 3px,
-      #3c6962 3px,
-      #3c6962 6px
-    );
+  /* 裏面は単色にする(模様やハイライトは無し) */
+  background: var(--tile-back);
 
   transform:
     rotateY(180deg)
@@ -1160,6 +1160,58 @@ body {
     center bottom;
 }
 
+/*
+ * 立体に見せるための「増殖」処理。
+ *
+ * 本体(.tile-front)そのものの後ろに、box-shadowで
+ * 少しずつずらした層を何枚も重ねて、厚みがあるように見せる。
+ * 座席ごとに増殖させる方向を変える:
+ *   対面    = 本体のYから上へ
+ *   下家(左) = 本体のXから左へ
+ *   上家(右) = 本体のXから右へ
+ * (box-shadowは要素自身の背景より後ろに描画されるので、
+ *  自然と本体より奥のレイヤーになる)
+ *
+ * 色は増殖の前半を牌の裏の色(--tile-back)、
+ * 後半を白にする。
+ */
+
+.seat.top .hand-row .tile3d > .tile-front {
+  box-shadow:
+    0 -1px 0 var(--tile-back),
+    0 -2px 0 var(--tile-back),
+    0 -3px 0 var(--tile-back),
+    0 -4px 0 var(--tile-back),
+    0 -5px 0 #ffffff,
+    0 -6px 0 #ffffff,
+    0 -7px 0 #ffffff,
+    0 -8px 0 #ffffff;
+}
+
+.seat.left .hand-row .tile3d > .tile-front {
+  box-shadow:
+    -1px 0 0 var(--tile-back),
+    -2px 0 0 var(--tile-back),
+    -3px 0 0 var(--tile-back),
+    -4px 0 0 var(--tile-back),
+    -5px 0 0 #ffffff,
+    -6px 0 0 #ffffff,
+    -7px 0 0 #ffffff,
+    -8px 0 0 #ffffff;
+}
+
+.seat.right .hand-row .tile3d > .tile-front {
+  box-shadow:
+    1px 0 0 var(--tile-back),
+    2px 0 0 var(--tile-back),
+    3px 0 0 var(--tile-back),
+    4px 0 0 var(--tile-back),
+    5px 0 0 #ffffff,
+    6px 0 0 #ffffff,
+    7px 0 0 #ffffff,
+    8px 0 0 #ffffff;
+}
+
 /* =========================================================
    他家の手牌列
    ========================================================= */
@@ -1225,19 +1277,8 @@ body {
 .tile3d > .tile-front.back {
   color: transparent;
 
-  background:
-    radial-gradient(
-      ellipse 75% 55% at 50% 28%,
-      rgba(255,255,255,.20) 0%,
-      rgba(255,255,255,0) 55%
-    ),
-    repeating-linear-gradient(
-      45deg,
-      #263b60 0px,
-      #263b60 3px,
-      #30466f 3px,
-      #30466f 6px
-    );
+  /* こちらも単色にする */
+  background: #263b60;
 
   border-color: #4c638c;
 }
