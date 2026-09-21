@@ -1176,40 +1176,44 @@ body {
  * 後半を白にする。
  */
 
-.seat.top .hand-row .tile3d > .tile-front {
+/*
+ * 【診断ラウンド2】各座席、色を変えて斜め方向(X・Y両方)に
+ * ずらす。どの座席で・何色が・画面のどっち方向に出るかを
+ * そのまま報告してもらえれば、正しい軸の組み合わせが分かる。
+ *
+ *   対面    = 赤 (本来: 上方向のつもり)
+ *   左(下家想定) = 黄緑 (本来: 左方向のつもり)
+ *   右(上家想定) = 水色 (本来: 右方向のつもり)
+ */
+
+.seat.top .hand-row .tile3d {
   box-shadow:
-    0 -1px 0 var(--tile-back),
-    0 -2px 0 var(--tile-back),
-    0 -3px 0 var(--tile-back),
-    0 -4px 0 var(--tile-back),
-    0 -5px 0 #ffffff,
-    0 -6px 0 #ffffff,
-    0 -7px 0 #ffffff,
-    0 -8px 0 #ffffff;
+    10px 10px 0 red,
+    20px 20px 0 red,
+    30px 30px 0 red,
+    40px 40px 0 red;
 }
 
-.seat.left .hand-row .tile3d > .tile-front {
+.seat.left .hand-row .tile3d {
   box-shadow:
-    -1px 0 0 var(--tile-back),
-    -2px 0 0 var(--tile-back),
-    -3px 0 0 var(--tile-back),
-    -4px 0 0 var(--tile-back),
-    -5px 0 0 #ffffff,
-    -6px 0 0 #ffffff,
-    -7px 0 0 #ffffff,
-    -8px 0 0 #ffffff;
+    10px 10px 0 lime,
+    20px 20px 0 lime,
+    30px 30px 0 lime,
+    40px 40px 0 lime;
 }
 
+.seat.right .hand-row .tile3d {
+  box-shadow:
+    10px 10px 0 cyan,
+    20px 20px 0 cyan,
+    30px 30px 0 cyan,
+    40px 40px 0 cyan;
+}
+
+.seat.top .hand-row .tile3d > .tile-front,
+.seat.left .hand-row .tile3d > .tile-front,
 .seat.right .hand-row .tile3d > .tile-front {
-  box-shadow:
-    1px 0 0 var(--tile-back),
-    2px 0 0 var(--tile-back),
-    3px 0 0 var(--tile-back),
-    4px 0 0 var(--tile-back),
-    5px 0 0 #ffffff,
-    6px 0 0 #ffffff,
-    7px 0 0 #ffffff,
-    8px 0 0 #ffffff;
+  box-shadow: none;
 }
 
 /* =========================================================
