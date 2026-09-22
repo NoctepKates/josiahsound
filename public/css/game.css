@@ -766,6 +766,15 @@ body {
  * 上にある既存CSSをそのまま使用する。
  */
 
+.tile-wrap {
+  position: relative;
+
+  width: var(--tile-w);
+  height: var(--river-tile-h);
+
+  flex: 0 0 auto;
+}
+
 .tile3d {
   position: relative;
 
@@ -1177,32 +1186,25 @@ body {
  */
 
 /*
- * 立体の「増殖」本実装。
+ * 立体の「増殖」: 牌1枚1枚の入れ物(.tile-wrap)に層を重ねる。
  *
- * 実測で分かったこと: 上家(右)は本体のYをマイナス方向に
- * ずらすと画面の右に伸びる。左家は右家の鏡像のはずなので
- * Yをプラス方向にずらすと画面の左に伸びると推測。対面は
- * 斜めテストの分解結果からYをマイナス方向で画面の上に
- * 伸びると推測。この2つ(対面・左家)は推測なので、
- * 見て違っていたら該当する座席のYの符号(プラスマイナス)
- * だけ反転させれば直るはず。
+ * .tile3d 自体は独自のrotateX(-90deg)+perspectiveを
+ * 持っていて、そこに影をつけると座席の回転(90/180/-90度)
+ * と絡み合って予測できない方向に出てしまうことが分かった。
+ * .tile-wrap には座席自体の回転(rotate)しかかかっていない
+ * ので、そちらに付ければ単純な2D回転の計算だけで済み、
+ * かつ牌1枚分の四角い形のまま増殖する。
+ *
+ * 本体のYをプラス方向にずらすと、
+ *   対面(180度回転)  → 画面の上
+ *   右家(-90度回転)  → 画面の右
+ *   左家(90度回転)   → 画面の左
+ * になるはず(座席の回転をそのまま当てはめて計算した結果)。
  *
  * 色は増殖の前半を牌の裏の色(--tile-back)、後半を白に。
  */
 
-.seat.top .hand-row .tile3d {
-  box-shadow:
-    0 -2px 0 var(--tile-back),
-    0 -4px 0 var(--tile-back),
-    0 -6px 0 var(--tile-back),
-    0 -8px 0 var(--tile-back),
-    0 -10px 0 #ffffff,
-    0 -12px 0 #ffffff,
-    0 -14px 0 #ffffff,
-    0 -16px 0 #ffffff;
-}
-
-.seat.left .hand-row .tile3d {
+.seat.top .hand-row .tile-wrap {
   box-shadow:
     0 2px 0 var(--tile-back),
     0 4px 0 var(--tile-back),
@@ -1214,22 +1216,28 @@ body {
     0 16px 0 #ffffff;
 }
 
-.seat.right .hand-row .tile3d {
+.seat.left .hand-row .tile-wrap {
   box-shadow:
-    0 -2px 0 var(--tile-back),
-    0 -4px 0 var(--tile-back),
-    0 -6px 0 var(--tile-back),
-    0 -8px 0 var(--tile-back),
-    0 -10px 0 #ffffff,
-    0 -12px 0 #ffffff,
-    0 -14px 0 #ffffff,
-    0 -16px 0 #ffffff;
+    0 2px 0 var(--tile-back),
+    0 4px 0 var(--tile-back),
+    0 6px 0 var(--tile-back),
+    0 8px 0 var(--tile-back),
+    0 10px 0 #ffffff,
+    0 12px 0 #ffffff,
+    0 14px 0 #ffffff,
+    0 16px 0 #ffffff;
 }
 
-.seat.top .hand-row .tile3d > .tile-front,
-.seat.left .hand-row .tile3d > .tile-front,
-.seat.right .hand-row .tile3d > .tile-front {
-  box-shadow: none;
+.seat.right .hand-row .tile-wrap {
+  box-shadow:
+    0 2px 0 var(--tile-back),
+    0 4px 0 var(--tile-back),
+    0 6px 0 var(--tile-back),
+    0 8px 0 var(--tile-back),
+    0 10px 0 #ffffff,
+    0 12px 0 #ffffff,
+    0 14px 0 #ffffff,
+    0 16px 0 #ffffff;
 }
 
 /* =========================================================

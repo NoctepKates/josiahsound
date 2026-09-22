@@ -337,15 +337,22 @@ function tileHtml(kind, selected, selectable, small, idx, isDrawn, tileId) {
    *
    * .tile-front は既存の .tile をそのまま利用するため、
    * クリック・ドラッグ・選択などの既存処理は変更しない。
+   *
+   * .tile-wrap は牌の「入れ物」。座席自体の回転(rotate)は
+   * 受け継ぐが、.tile3d 自身が持つ追加のrotateX/perspectiveは
+   * 受け継がない。増殖(box-shadowの層)はこの .tile-wrap に
+   * 付けることで、牌1枚分の四角い形のまま奥に重なるようにする。
    */
   return `
-    <div class="tile3d">
-      <div class="${cls.join(' ')} tile-front" ${dataAttrs}>${kind || ''}</div>
-      <div class="tile-face tile-back"></div>
-      <div class="tile-face tile-left"></div>
-      <div class="tile-face tile-right"></div>
-      <div class="tile-face tile-top"></div>
-      <div class="tile-face tile-bottom"></div>
+    <div class="tile-wrap">
+      <div class="tile3d">
+        <div class="${cls.join(' ')} tile-front" ${dataAttrs}>${kind || ''}</div>
+        <div class="tile-face tile-back"></div>
+        <div class="tile-face tile-left"></div>
+        <div class="tile-face tile-right"></div>
+        <div class="tile-face tile-top"></div>
+        <div class="tile-face tile-bottom"></div>
+      </div>
     </div>
   `;
 }
