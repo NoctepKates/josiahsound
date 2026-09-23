@@ -773,6 +773,17 @@ body {
   height: var(--river-tile-h);
 
   flex: 0 0 auto;
+
+  /*
+   * ここで preserve-3d が無いと、内側の .tile3d が持つ
+   * 3D階層(6面体)がここで平面化されて潰れてしまう。
+   * (.tile-wrapに影の層を持たせるために追加した入れ物だが、
+   *  3Dの連鎖はちゃんと引き継がせる必要がある)
+   */
+  transform-style: preserve-3d;
+
+  /* 影が入れ物の外にはみ出ても切り取られないように */
+  overflow: visible;
 }
 
 .tile3d {
