@@ -782,6 +782,9 @@ body {
    */
   transform-style: preserve-3d;
 
+  /* 牌本体と同じ角丸にする(これが無いと影が四角のまま繋がって棒に見える) */
+  border-radius: 5px 5px 4px 4px;
+
   /* 影が入れ物の外にはみ出ても切り取られないように */
   overflow: visible;
 }
@@ -1213,42 +1216,45 @@ body {
  * になるはず(座席の回転をそのまま当てはめて計算した結果)。
  *
  * 色は増殖の前半を牌の裏の色(--tile-back)、後半を白に。
+ *
+ * spread値(4つ目の数値)をマイナスにして、隣の牌の影と
+ * くっついて見えないよう少し内側に縮めている。
  */
 
 .seat.top .hand-row .tile-wrap {
   box-shadow:
-    0 2px 0 var(--tile-back),
-    0 4px 0 var(--tile-back),
-    0 6px 0 var(--tile-back),
-    0 8px 0 var(--tile-back),
-    0 10px 0 #ffffff,
-    0 12px 0 #ffffff,
-    0 14px 0 #ffffff,
-    0 16px 0 #ffffff;
+    0 2px 0 -3px var(--tile-back),
+    0 4px 0 -3px var(--tile-back),
+    0 6px 0 -3px var(--tile-back),
+    0 8px 0 -3px var(--tile-back),
+    0 10px 0 -3px #ffffff,
+    0 12px 0 -3px #ffffff,
+    0 14px 0 -3px #ffffff,
+    0 16px 0 -3px #ffffff;
 }
 
 .seat.left .hand-row .tile-wrap {
   box-shadow:
-    0 2px 0 var(--tile-back),
-    0 4px 0 var(--tile-back),
-    0 6px 0 var(--tile-back),
-    0 8px 0 var(--tile-back),
-    0 10px 0 #ffffff,
-    0 12px 0 #ffffff,
-    0 14px 0 #ffffff,
-    0 16px 0 #ffffff;
+    0 2px 0 -3px var(--tile-back),
+    0 4px 0 -3px var(--tile-back),
+    0 6px 0 -3px var(--tile-back),
+    0 8px 0 -3px var(--tile-back),
+    0 10px 0 -3px #ffffff,
+    0 12px 0 -3px #ffffff,
+    0 14px 0 -3px #ffffff,
+    0 16px 0 -3px #ffffff;
 }
 
 .seat.right .hand-row .tile-wrap {
   box-shadow:
-    0 2px 0 var(--tile-back),
-    0 4px 0 var(--tile-back),
-    0 6px 0 var(--tile-back),
-    0 8px 0 var(--tile-back),
-    0 10px 0 #ffffff,
-    0 12px 0 #ffffff,
-    0 14px 0 #ffffff,
-    0 16px 0 #ffffff;
+    0 2px 0 -3px var(--tile-back),
+    0 4px 0 -3px var(--tile-back),
+    0 6px 0 -3px var(--tile-back),
+    0 8px 0 -3px var(--tile-back),
+    0 10px 0 -3px #ffffff,
+    0 12px 0 -3px #ffffff,
+    0 14px 0 -3px #ffffff,
+    0 16px 0 -3px #ffffff;
 }
 
 /* =========================================================
