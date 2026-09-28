@@ -52,13 +52,15 @@ body {
     inset 0 0 0 2px rgba(244, 214, 145, .22),
     inset 0 0 35px rgba(0, 0, 0, .42);
 
+  /* 卓全体の共通視点 */
+  perspective: 831px;
+  perspective-origin: 50% 45%;
+
   transform:
-    perspective(831px)
     rotateX(26deg)
     translateY(-60px);
 
   transform-origin: 50% 58%;
-
   transform-style: preserve-3d;
 
   overflow: visible;
@@ -797,26 +799,10 @@ body {
 
   flex: 0 0 auto;
 
-  /*
-   * この牌専用の視点(perspective)を持たせる。
-   * こうすることで、卓のどの位置に置かれていても、
-   * また座席がどれだけ回転していても、
-   * 牌自身の見た目(奥行き・歪み方)は常に一定になる。
-   * 卓全体で1つの消失点を共有すると、卓の端に行くほど
-   * (特に90度回転している左右の座席で)歪みが大きくなり、
-   * 手前の牌ほど潰れて線のようになってしまう。
-   */
-  perspective: 220px;
-  perspective-origin: 50% 100%;
-
   transform-style: preserve-3d;
   transform-origin: center bottom;
 
-  /*
-   * tile3d自身はクリックを邪魔しない。
-   */
   pointer-events: none;
-
   overflow: visible;
 }
 
@@ -1183,80 +1169,6 @@ body {
     center bottom;
 }
 
-/*
- * 立体に見せるための「増殖」処理。
- *
- * 本体(.tile-front)そのものの後ろに、box-shadowで
- * 少しずつずらした層を何枚も重ねて、厚みがあるように見せる。
- * 座席ごとに増殖させる方向を変える:
- *   対面    = 本体のYから上へ
- *   下家(左) = 本体のXから左へ
- *   上家(右) = 本体のXから右へ
- * (box-shadowは要素自身の背景より後ろに描画されるので、
- *  自然と本体より奥のレイヤーになる)
- *
- * 色は増殖の前半を牌の裏の色(--tile-back)、
- * 後半を白にする。
- */
-
-/*
- * 立体の「増殖」: 牌1枚1枚の入れ物(.tile-wrap)に層を重ねる。
- *
- * .tile3d 自体は独自のrotateX(-90deg)+perspectiveを
- * 持っていて、そこに影をつけると座席の回転(90/180/-90度)
- * と絡み合って予測できない方向に出てしまうことが分かった。
- * .tile-wrap には座席自体の回転(rotate)しかかかっていない
- * ので、そちらに付ければ単純な2D回転の計算だけで済み、
- * かつ牌1枚分の四角い形のまま増殖する。
- *
- * 本体のYをプラス方向にずらすと、
- *   対面(180度回転)  → 画面の上
- *   右家(-90度回転)  → 画面の右
- *   左家(90度回転)   → 画面の左
- * になるはず(座席の回転をそのまま当てはめて計算した結果)。
- *
- * 色は増殖の前半を牌の裏の色(--tile-back)、後半を白に。
- *
- * spread値(4つ目の数値)をマイナスにして、隣の牌の影と
- * くっついて見えないよう少し内側に縮めている。
- */
-
-.seat.top .hand-row .tile-wrap {
-  box-shadow:
-    0 2px 0 -3px var(--tile-back),
-    0 4px 0 -3px var(--tile-back),
-    0 6px 0 -3px var(--tile-back),
-    0 8px 0 -3px var(--tile-back),
-    0 10px 0 -3px #ffffff,
-    0 12px 0 -3px #ffffff,
-    0 14px 0 -3px #ffffff,
-    0 16px 0 -3px #ffffff;
-}
-
-.seat.left .hand-row .tile-wrap {
-  box-shadow:
-    0 2px 0 -3px var(--tile-back),
-    0 4px 0 -3px var(--tile-back),
-    0 6px 0 -3px var(--tile-back),
-    0 8px 0 -3px var(--tile-back),
-    0 10px 0 -3px #ffffff,
-    0 12px 0 -3px #ffffff,
-    0 14px 0 -3px #ffffff,
-    0 16px 0 -3px #ffffff;
-}
-
-.seat.right .hand-row .tile-wrap {
-  box-shadow:
-    0 2px 0 -3px var(--tile-back),
-    0 4px 0 -3px var(--tile-back),
-    0 6px 0 -3px var(--tile-back),
-    0 8px 0 -3px var(--tile-back),
-    0 10px 0 -3px #ffffff,
-    0 12px 0 -3px #ffffff,
-    0 14px 0 -3px #ffffff,
-    0 16px 0 -3px #ffffff;
-}
-
 /* =========================================================
    他家の手牌列
    ========================================================= */
@@ -1280,10 +1192,7 @@ body {
 .seat.top .hand-row .tile3d,
 .seat.left .hand-row .tile3d,
 .seat.right .hand-row .tile3d {
-  filter:
-    drop-shadow(
-      2px 5px 4px rgba(0,0,0,.40)
-    );
+  filter: none;
 }
 
 
