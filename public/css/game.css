@@ -4,7 +4,7 @@
   --compass-size: 195px;
   --river-tile-h: 42px;
 
-  --tile-depth: 12px;
+  --tile-depth: 16px;
 
   --tile-face-top: #fffef9;
   --tile-face-bottom: #e6dbc0;
@@ -1452,11 +1452,15 @@ body {
   pointer-events: none;
 }
 
-.tile3d > .tile-front {
+.seat.bottom .tile3d {
   pointer-events: auto;
 }
 
-.tile3d > .tile-front[data-kind] {
+.seat.bottom .tile3d > .tile-front {
+  pointer-events: auto;
+}
+
+.seat.bottom .tile3d > .tile-front[data-kind] {
   pointer-events: auto;
 }
 
