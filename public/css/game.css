@@ -4,7 +4,7 @@
   --compass-size: 195px;
   --river-tile-h: 42px;
 
-  --tile-depth: 8px;
+  --tile-depth: 12px;
 
   --tile-face-top: #fffef9;
   --tile-face-bottom: #e6dbc0;
@@ -1271,6 +1271,31 @@ body {
 
 /* 河の内部ブロック(上のブロックと完全重複していたので1つに統合) */
 
+.river-block {
+  position: absolute;
+
+  display: grid;
+  grid-template-columns: repeat(6, var(--tile-w));
+  grid-auto-rows: var(--river-tile-h);
+
+  column-gap: var(--tile-gap);
+  row-gap: var(--tile-gap);
+
+  width: calc(
+    6 * var(--tile-w) +
+    5 * var(--tile-gap)
+  );
+
+  height: calc(
+    5 * var(--river-tile-h) +
+    4 * var(--tile-gap)
+  );
+
+  margin: 0;
+  padding: 0;
+
+  transform-style: preserve-3d;
+}
 
 /*
  * 河の牌。
