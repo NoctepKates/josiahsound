@@ -1452,16 +1452,19 @@ body {
   pointer-events: none;
 }
 
-.seat.bottom .tile3d {
+/* 自分の手牌は .tile-wrap 全体を操作領域にする */
+.seat.bottom .tile-wrap {
   pointer-events: auto;
+  cursor: pointer;
 }
 
-.seat.bottom .tile3d > .tile-front {
-  pointer-events: auto;
+/* 中の6面体はクリック判定を持たない */
+.seat.bottom .tile-wrap .tile3d {
+  pointer-events: none;
 }
 
-.seat.bottom .tile3d > .tile-front[data-kind] {
-  pointer-events: auto;
+.seat.bottom .tile-wrap .tile3d > * {
+  pointer-events: none;
 }
 
 

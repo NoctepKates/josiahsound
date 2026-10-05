@@ -501,10 +501,13 @@ function attachHandHandlers(handEl) {
   const tiles = [...handEl.querySelectorAll('.tile[data-kind]')];
 
   tiles.forEach((el) => {
+    const wrap = el.closest('.tile-wrap');
+
+    if (!wrap) return;
     const tileId = el.dataset.tileId;
     const isDrawn = el.dataset.drawn === '1';
 
-    el.onclick = () => {
+    wrap.onclick = () => {
       if (el.classList.contains('selected')) {
         selectedTileId = tileId;
         doDiscard();
@@ -519,21 +522,22 @@ function attachHandHandlers(handEl) {
       selectedTileId = tileId;
     };
 
-    el.ondragstart = (e) => {
+    wrap.draggable = true;
+    wrap.ondragstart = (e) => {
       dragFromIdx = isDrawn ? 'drawn' : Number(el.dataset.idx);
       e.dataTransfer.effectAllowed = 'move';
     };
 
-    el.ondragover = (e) => {
+    wrap.ondragover = (e) => {
       e.preventDefault();
       el.classList.add('drop-target');
     };
 
-    el.ondragleave = () => {
+    wrap.ondragleave = () => {
       el.classList.remove('drop-target');
     };
 
-    el.ondrop = (e) => {
+    wrap.ondrop = (e) => {
       e.preventDefault();
       el.classList.remove('drop-target');
 
