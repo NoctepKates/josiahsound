@@ -771,23 +771,14 @@ body {
 .tile-wrap {
   position: relative;
 
-  width: var(--tile-w);
-  height: var(--river-tile-h);
+  width: calc(var(--tile-w) + var(--tile-depth));
+  height: calc(var(--river-tile-h) + var(--tile-depth));
 
   flex: 0 0 auto;
 
-  /*
-   * ここで preserve-3d が無いと、内側の .tile3d が持つ
-   * 3D階層(6面体)がここで平面化されて潰れてしまう。
-   * (.tile-wrapに影の層を持たせるために追加した入れ物だが、
-   *  3Dの連鎖はちゃんと引き継がせる必要がある)
-   */
   transform-style: preserve-3d;
 
-  /* 牌本体と同じ角丸にする(これが無いと影が四角のまま繋がって棒に見える) */
-  border-radius: 5px 5px 4px 4px;
-
-  /* 影が入れ物の外にはみ出ても切り取られないように */
+  border-radius: 5px;
   overflow: visible;
 }
 
@@ -1104,6 +1095,7 @@ body {
    */
   transform:
     translateZ(3px);
+    scale(1.2);
 }
 
 
@@ -1307,13 +1299,9 @@ body {
 
 .river .tile3d {
   position: relative;
-
   width: var(--tile-w);
   height: var(--river-tile-h);
-
-  transform:
-    translateZ(3px);
-
+  transform: translateZ(3px);
   z-index: 31;
 }
 
@@ -1449,7 +1437,19 @@ body {
    ========================================================= */
 
 .tile3d {
+  position: absolute;
+
+  left: 0;
+  top: 0;
+
+  width: var(--tile-w);
+  height: var(--river-tile-h);
+
+  transform-style: preserve-3d;
+  transform-origin: center bottom;
+
   pointer-events: none;
+  overflow: visible;
 }
 
 /* 自分の手牌は .tile-wrap 全体を操作領域にする */
