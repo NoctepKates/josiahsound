@@ -771,14 +771,13 @@ body {
 .tile-wrap {
   position: relative;
 
-  width: calc(var(--tile-w) + var(--tile-depth));
-  height: calc(var(--river-tile-h) + var(--tile-depth));
+  width: var(--tile-w);
+  height: var(--river-tile-h);
 
   flex: 0 0 auto;
 
   transform-style: preserve-3d;
-
-  border-radius: 5px;
+  border-radius: 5px 5px 4px 4px;
   overflow: visible;
 }
 
@@ -1095,7 +1094,6 @@ body {
    */
   transform:
     translateZ(3px);
-    scale(1.2);
 }
 
 
@@ -1430,43 +1428,6 @@ body {
 .player-tag {
   z-index: 50;
 }
-
-
-/* =========================================================
-   クリック
-   ========================================================= */
-
-.tile3d {
-  position: absolute;
-
-  left: 0;
-  top: 0;
-
-  width: var(--tile-w);
-  height: var(--river-tile-h);
-
-  transform-style: preserve-3d;
-  transform-origin: center bottom;
-
-  pointer-events: none;
-  overflow: visible;
-}
-
-/* 自分の手牌は .tile-wrap 全体を操作領域にする */
-.seat.bottom .tile-wrap {
-  pointer-events: auto;
-  cursor: pointer;
-}
-
-/* 中の6面体はクリック判定を持たない */
-.seat.bottom .tile-wrap .tile3d {
-  pointer-events: none;
-}
-
-.seat.bottom .tile-wrap .tile3d > * {
-  pointer-events: none;
-}
-
 
 /* =========================================================
    プレイヤー名の位置
