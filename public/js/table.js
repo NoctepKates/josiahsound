@@ -498,6 +498,33 @@ document.getElementById('devDebugToggle')?.addEventListener('click', () => {
 });
 
 function attachHandHandlers(handEl) {
+  handEl.onclick = (e) => {
+    const wrap = getClickedHandTile(
+      handEl,
+      e.clientX,
+      e.clientY
+    );
+
+    if (!wrap) return;
+
+    const el = wrap.querySelector('.tile[data-kind]');
+    if (!el) return;
+
+    const tileId = el.dataset.tileId;
+
+    if (el.classList.contains('selected')) {
+      selectedTileId = tileId;
+      doDiscard();
+      return;
+    }
+
+    handEl.querySelectorAll('.tile').forEach((t) =>
+      t.classList.remove('selected')
+    );
+
+    el.classList.add('selected');
+    selectedTileId = tileId;
+  };
   const tiles = [...handEl.querySelectorAll('.tile[data-kind]')];
 
   tiles.forEach((el) => {
@@ -506,21 +533,6 @@ function attachHandHandlers(handEl) {
     if (!wrap) return;
     const tileId = el.dataset.tileId;
     const isDrawn = el.dataset.drawn === '1';
-
-    wrap.onclick = () => {
-      if (el.classList.contains('selected')) {
-        selectedTileId = tileId;
-        doDiscard();
-        return;
-      }
-
-      handEl.querySelectorAll('.tile').forEach((t) =>
-        t.classList.remove('selected')
-      );
-
-      el.classList.add('selected');
-      selectedTileId = tileId;
-    };
 
     wrap.draggable = true;
     wrap.ondragstart = (e) => {
@@ -581,6 +593,36 @@ function attachHandHandlers(handEl) {
       renderHandOnly();
     };
   });
+}
+
+function getClickedHandTile(handEl, clientX, clientY) {
+  const wraps = [
+    ...handEl.querySelectorAll('.tile-wrap')
+  ];
+
+  if (wraps.length === 0) return null;
+
+  let best = null;
+  let bestDist = Infinity;
+
+  for (const wrap of wraps) {
+    const rect = wrap.getBoundingClientRect();
+
+    const cx = rect.left + rect.width / 2;
+    const cy = rect.top + rect.height / 2;
+
+    const dx = clientX - cx;
+    const dy = clientY - cy;
+
+    const dist = dx * dx + dy * dy;
+
+    if (dist < bestDist) {
+      bestDist = dist;
+      best = wrap;
+    }
+  }
+
+  return best;
 }
 
 function renderHandOnly() {

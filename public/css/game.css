@@ -796,6 +796,10 @@ body {
   overflow: visible;
 }
 
+.seat.bottom .tile-wrap {
+  cursor: pointer;
+  pointer-events: auto;
+}
 
 /* =========================================================
    6面共通
@@ -1382,6 +1386,29 @@ body {
   margin-right: 0;
 }
 
+/* 自分の河：表面を自分側へ */
+.river.river-bottom .tile3d {
+  transform: translateZ(3px) rotateX(-90deg);
+  transform-origin: center center;
+}
+
+/* 対面の河：表面を対面側へ */
+.river.river-top .tile3d {
+  transform: translateZ(3px) rotateX(90deg);
+  transform-origin: center center;
+}
+
+/* 右側の河：表面を右側へ */
+.river.river-right .tile3d {
+  transform: translateZ(3px) rotateY(90deg);
+  transform-origin: center center;
+}
+
+/* 左側の河：表面を左側へ */
+.river.river-left .tile3d {
+  transform: translateZ(3px) rotateY(-90deg);
+  transform-origin: center center;
+}
 
 /* =========================================================
    鳴き牌
