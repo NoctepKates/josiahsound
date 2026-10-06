@@ -499,15 +499,41 @@ document.getElementById('devDebugToggle')?.addEventListener('click', () => {
 
 function attachHandHandlers(handEl) {
   handEl.onclick = (e) => {
-    const wrap = getClickedHandTile(
-      handEl,
-      e.clientX,
-      e.clientY
-    );
+    const wraps = [
+      ...handEl.querySelectorAll('.tile-wrap')
+    ];
 
-    if (!wrap) return;
+    if (wraps.length === 0) return;
 
-    const el = wrap.querySelector('.tile[data-kind]');
+    let nearest = null;
+    let nearestDistance = Infinity;
+
+    for (const wrap of wraps) {
+      const rect = wrap.getBoundingClientRect();
+
+      const centerX =
+        rect.left + rect.width / 2;
+
+      const centerY =
+        rect.top + rect.height / 2;
+
+      const dx = e.clientX - centerX;
+      const dy = e.clientY - centerY;
+
+      const distance =
+        dx * dx + dy * dy;
+
+      if (distance < nearestDistance) {
+        nearestDistance = distance;
+        nearest = wrap;
+      }
+    }
+
+    if (!nearest) return;
+
+    const el =
+      nearest.querySelector('.tile[data-kind]');
+
     if (!el) return;
 
     const tileId = el.dataset.tileId;
@@ -518,13 +544,17 @@ function attachHandHandlers(handEl) {
       return;
     }
 
-    handEl.querySelectorAll('.tile').forEach((t) =>
-      t.classList.remove('selected')
-    );
+    handEl
+      .querySelectorAll('.tile')
+      .forEach((t) =>
+        t.classList.remove('selected')
+      );
 
     el.classList.add('selected');
+
     selectedTileId = tileId;
   };
+
   const tiles = [...handEl.querySelectorAll('.tile[data-kind]')];
 
   tiles.forEach((el) => {
