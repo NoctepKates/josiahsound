@@ -1082,22 +1082,16 @@ body {
    ========================================================= */
 
 .seat.bottom .hand-row {
-  /*
-   * 元の横並びを維持。
-   */
   transform: none !important;
-
   perspective: none !important;
-
-  transform-style: flat;
+  transform-style: preserve-3d;
 }
 
 .seat.bottom .hand-row .tile3d {
-  /*
-   * 自分の牌は立てない。
-   */
   transform:
-    translateZ(3px);
+    translateZ(6px)
+    rotateX(90deg);
+  transform-origin: center bottom;
 }
 
 
