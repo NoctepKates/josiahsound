@@ -1090,7 +1090,8 @@ body {
 .seat.bottom .hand-row .tile3d {
   transform:
     translateZ(6px)
-    rotateX(90deg);
+    rotateZ(180deg)
+    rotateX(-90deg);
   transform-origin: center bottom;
 }
 
