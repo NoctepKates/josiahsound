@@ -1077,6 +1077,7 @@ body {
 }
 
 
+
 /* =========================================================
    自分の手牌
    ========================================================= */
@@ -1090,7 +1091,7 @@ body {
 .seat.bottom .hand-row .tile3d {
   transform:
     translateZ(6px)
-    rotateX(-90deg);
+    rotateX(-55deg);
   transform-origin: center bottom;
 }
 
@@ -1225,6 +1226,18 @@ body {
   border-color: #4c638c;
 }
 
+/* 自分の手牌：6面すべてをクリック判定の対象にする */
+.seat.bottom .tile-wrap,
+.seat.bottom .tile3d,
+.seat.bottom .tile3d > .tile-face,
+.seat.bottom .tile3d > .tile-front {
+  pointer-events: auto;
+}
+
+.seat.bottom .tile3d {
+  cursor: pointer;
+}
+
 /* =========================================================
    河
    ========================================================= */
@@ -1297,7 +1310,12 @@ body {
   position: relative;
   width: var(--tile-w);
   height: var(--river-tile-h);
-  transform: translateZ(3px);
+
+  transform:
+    translateZ(3px)
+    rotateX(-55deg);
+
+  transform-origin: center bottom;
   z-index: 31;
 }
 
