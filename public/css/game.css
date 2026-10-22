@@ -1106,7 +1106,8 @@ body {
 
 .seat.bottom .hand-row .tile3d {
   transform:
-    translateZ(6px);
+    translateZ(6px)
+    rotateX(-55deg);
   transform-origin: center bottom;
 }
 
@@ -1326,9 +1327,11 @@ body {
   width: var(--tile-w);
   height: var(--river-tile-h);
 
-  /* 河の牌は卓に寝かせる */
-  transform: translateZ(3px);
+  transform:
+    translateZ(3px)
+    rotateX(-55deg);
 
+  transform-origin: center bottom;
   z-index: 31;
 }
 
