@@ -872,6 +872,22 @@ body {
   box-shadow: none;
 }
 
+/*
+ * 自分の手牌と河は、牌がほぼ正面(卓に対してほぼ寝た/立てた
+ * ままの角度)を向いているため、6面体を回転させても側面が
+ * ほとんど見えない。本体の角度(rotate/rotateX)はそのままに、
+ * 縁に薄い「厚みの影」を足すことで立体に見せる。
+ * 天井からの光を想定し、影は常に下側(光源と反対側)に出す。
+ */
+.seat.bottom .hand-row .tile3d > .tile-front,
+.river .tile3d > .tile-front {
+  box-shadow:
+    0 1px 0 var(--tile-side-light),
+    0 2px 0 var(--tile-side-mid),
+    0 3px 0 var(--tile-side-dark),
+    0 4px 3px rgba(0, 0, 0, .35);
+}
+
 
 /* =========================================================
    裏面
