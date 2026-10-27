@@ -53,7 +53,7 @@ body {
     inset 0 0 35px rgba(0, 0, 0, .42);
 
   /* 卓全体の共通視点 */
-  perspective: 831px;
+  perspective: 1200px;
   perspective-origin: 50% 100%;
 
   transform:
@@ -1308,7 +1308,7 @@ body {
   height: var(--river-tile-h);
 
   /* 河の牌は薄い直方体に統一する */
-  --tile-depth: 4px;
+  --tile-depth: 8px;
 
   transform: translateZ(3px);
   transform-origin: center bottom;
@@ -1400,8 +1400,11 @@ body {
   width: var(--tile-w);
   height: var(--river-tile-h);
 
-  transform:
-    translateZ(3px);
+  /* 河の牌と同じ厚さにする */
+  --tile-depth: 8px;
+
+  transform: translateZ(3px);
+  transform-origin: center bottom;
 }
 
 
