@@ -1487,3 +1487,24 @@ body {
   --tile-w: 40px;
   --river-tile-h: 56px;
 }
+
+
+/* 選択時：六面体全体を持ち上げて発光させる */
+.seat.bottom .tile-wrap:has(> .tile3d > .tile-front.selected) {
+  transform: translateY(-11px) translateZ(14px);
+  filter:
+    drop-shadow(0 0 3px var(--gold-bright))
+    drop-shadow(0 0 7px rgba(243, 215, 138, 0.8));
+  z-index: 100;
+}
+
+/* 表面だけが動く既存効果を解除 */
+.seat.bottom .tile3d > .tile-front.selected {
+  transform: translateZ(calc(var(--tile-depth) / 2)) !important;
+  box-shadow: none !important;
+}
+
+/* 牌の文字を少し大きくする */
+.seat.bottom .tile3d > .tile-front {
+  font-size: 19px;
+}
