@@ -54,7 +54,7 @@ body {
 
   /* 卓全体の共通視点 */
   perspective: 831px;
-  perspective-origin: 50% 45%;
+  perspective-origin: 50% 100%;
 
   transform:
     rotateX(26deg)
@@ -1248,24 +1248,20 @@ body {
 
 .river {
   position: absolute;
-
   display: block;
 
-  width:
-    calc(
-      6 * var(--tile-w) +
-      5 * var(--tile-gap)
-    );
+  width: calc(
+    6 * var(--tile-w) +
+    5 * var(--tile-gap)
+  );
 
-  height:
-    calc(
-      5 * var(--river-tile-h)
-    );
+  height: calc(
+    5 * var(--river-tile-h) +
+    4 * var(--tile-gap)
+  );
 
   pointer-events: none;
-
   transform-style: preserve-3d;
-
   z-index: 30;
 }
 
@@ -1305,17 +1301,20 @@ body {
  * .river 側で処理する。
  */
 
+
 .river .tile3d {
   position: relative;
   width: var(--tile-w);
   height: var(--river-tile-h);
 
-  transform:
-    translateZ(3px);
+  /* 河の牌は薄い直方体に統一する */
+  --tile-depth: 4px;
 
+  transform: translateZ(3px);
   transform-origin: center bottom;
   z-index: 31;
 }
+
 
 
 /* =========================================================
@@ -1338,19 +1337,16 @@ body {
 }
 
 .river.river-top {
-  top:
-    calc(
-      50% -
-      var(--compass-size) / 2 -
-      5 * var(--river-tile-h)
-    );
+  top: calc(
+    50% -
+    var(--compass-size) / 2 -
+    5 * var(--river-tile-h) -
+    4 * var(--tile-gap)
+  );
 
   left: 50%;
 
-  transform:
-    translateX(-50%)
-    rotate(180deg);
-
+  transform: translateX(-50%) rotate(180deg);
   transform-origin: center center;
 }
 
@@ -1484,4 +1480,22 @@ body {
 .player-tag.corner-r3 {
   bottom: 8px;
   right: 8px;
+}
+
+
+/* 自分の手牌だけ大きくする */
+.seat.bottom .hand-row .tile-wrap {
+  width: 40px;
+  height: 56px;
+}
+
+.seat.bottom .hand-row .tile3d {
+  width: 40px;
+  height: 56px;
+}
+
+.seat.bottom .hand-row .tile3d > .tile-front,
+.seat.bottom .hand-row .tile3d > .tile-back {
+  width: 40px;
+  height: 56px;
 }

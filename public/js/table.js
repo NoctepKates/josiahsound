@@ -1124,7 +1124,7 @@ function renderRiverTiles(discards) {
   const blocks = [];
 
   const blockWidth =
-    'calc(6 * (var(--tile-w) + var(--tile-gap)))';
+    'calc(6 * var(--tile-w) + 5 * var(--tile-gap))';
 
   for (let i = 0; i < discards.length; i += 30) {
     const block = discards.slice(i, i + 30);
