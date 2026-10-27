@@ -1482,20 +1482,8 @@ body {
   right: 8px;
 }
 
-
-/* 自分の手牌だけ大きくする */
-.seat.bottom .hand-row .tile-wrap {
-  width: 40px;
-  height: 56px;
-}
-
-.seat.bottom .hand-row .tile3d {
-  width: 40px;
-  height: 56px;
-}
-
-.seat.bottom .hand-row .tile3d > .tile-front,
-.seat.bottom .hand-row .tile3d > .tile-back {
-  width: 40px;
-  height: 56px;
+/* 自分の手牌：六面体全体を約1.33倍に拡大 */
+.seat.bottom .hand-row {
+  --tile-w: 40px;
+  --river-tile-h: 56px;
 }
