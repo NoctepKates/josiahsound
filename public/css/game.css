@@ -14,6 +14,10 @@
   --tile-side-dark: #746a53;
 
   --tile-back: #315c56;
+
+  /* 側面: 表に近い半分=白、裏に近い半分=緑(本物の牌風) */
+  --tile-side-white: #fffef9;
+  --tile-side-green: #315c56;
 }
 
 html,
@@ -915,7 +919,8 @@ body {
   width: var(--tile-depth);
   height: var(--river-tile-h);
 
-  border: 1px solid var(--tile-side-dark);
+  border: 0;
+  box-sizing: border-box;
 
   /*
    * 側面4枚(上下左右)は全部この同じグラデーションにする。
@@ -930,10 +935,11 @@ body {
    */
   background:
     linear-gradient(
-      180deg,
-      var(--tile-side-light) 0%,
-      var(--tile-side-mid) 55%,
-      var(--tile-side-dark) 100%
+      90deg,
+      var(--tile-side-green) 0%,
+      var(--tile-side-green) 50%,
+      var(--tile-side-white) 50%,
+      var(--tile-side-white) 100%
     );
 
   transform:
@@ -962,15 +968,17 @@ body {
   width: var(--tile-depth);
   height: var(--river-tile-h);
 
-  border: 1px solid var(--tile-side-dark);
+  border: 0;
+  box-sizing: border-box;
 
   /* 左側面と同じ理由で、同じグラデーションを使う */
   background:
     linear-gradient(
-      180deg,
-      var(--tile-side-light) 0%,
-      var(--tile-side-mid) 55%,
-      var(--tile-side-dark) 100%
+      90deg,
+      var(--tile-side-white) 0%,
+      var(--tile-side-white) 50%,
+      var(--tile-side-green) 50%,
+      var(--tile-side-green) 100%
     );
 
   transform:
@@ -999,15 +1007,17 @@ body {
   width: var(--tile-w);
   height: var(--tile-depth);
 
-  border: 1px solid var(--tile-side-dark);
+  border: 0;
+  box-sizing: border-box;
 
   /* 左右側面と同じグラデーションで統一 */
   background:
     linear-gradient(
       180deg,
-      var(--tile-side-light) 0%,
-      var(--tile-side-mid) 55%,
-      var(--tile-side-dark) 100%
+      var(--tile-side-green) 0%,
+      var(--tile-side-green) 50%,
+      var(--tile-side-white) 50%,
+      var(--tile-side-white) 100%
     );
 
   transform:
@@ -1036,15 +1046,17 @@ body {
   width: var(--tile-w);
   height: var(--tile-depth);
 
-  border: 1px solid var(--tile-side-dark);
+  border: 0;
+  box-sizing: border-box;
 
   /* 左右・上面と同じグラデーションで統一 */
   background:
     linear-gradient(
       180deg,
-      var(--tile-side-light) 0%,
-      var(--tile-side-mid) 55%,
-      var(--tile-side-dark) 100%
+      var(--tile-side-white) 0%,
+      var(--tile-side-white) 50%,
+      var(--tile-side-green) 50%,
+      var(--tile-side-green) 100%
     );
 
   transform:
