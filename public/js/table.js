@@ -168,11 +168,14 @@ function render(s) {
     const tagEl =
       document.getElementById('tag-' + divKey);
 
+    const meldLayerEl =
+      document.getElementById('meld-layer-' + divKey);
+
     const activeIdx =
       activeDivKeys.indexOf(divKey);
 
     if (activeIdx === -1) {
-      [seatEl, riverEl, compassEl, tagEl].forEach((el) => {
+      [seatEl, riverEl, compassEl, tagEl, meldLayerEl].forEach((el) => {
         if (el) el.style.display = 'none';
       });
 
@@ -183,6 +186,7 @@ function render(s) {
     if (riverEl) riverEl.style.display = 'flex';
     if (compassEl) compassEl.style.display = 'flex';
     if (tagEl) tagEl.style.display = 'flex';
+    if (meldLayerEl) meldLayerEl.style.display = '';
 
     /*
      * 自分を画面下側として、時計回りに
@@ -296,13 +300,18 @@ function render(s) {
       meldEl.innerHTML =
         p.melds
           .map((m) =>
-            `<div style="display:flex; gap:2px;">${
-              m.tiles
-                .map((k) =>
+            `<div class="meld-word">${
+              meldDisplayTiles(m)
+                .map((t) =>
                   tileHtml(
-                    k,
+                    t.kind,
                     false,
-                    false
+                    false,
+                    divKey !== 'self',
+                    undefined,
+                    false,
+                    undefined,
+                    t.called ? 'meld-called' : ''
                   )
                 )
                 .join('')
@@ -316,7 +325,36 @@ function render(s) {
   renderDevWall(s);
 }
 
-function tileHtml(kind, selected, selectable, small, idx, isDrawn, tileId) {
+/*
+ * 鳴いてできた単語を、単語の文字順に並べた牌リストにする。
+ * サーバーから来る m.tiles は [鳴いた牌, 手牌から出した牌...] の順なので、
+ * そのままだと単語として読めない。鳴いた牌(tiles[0])と同じ文字のうち
+ * 単語中で最初のものを「鳴いた牌」として called: true にする(横向きに表示)。
+ * 文字が噛み合わない場合は元の順序のまま、先頭を鳴いた牌として扱う。
+ */
+function meldDisplayTiles(m) {
+  const kinds = m.tiles.slice();
+  const pool = kinds.slice();
+  const ordered = [];
+  let calledAssigned = false;
+  let ok = true;
+
+  for (const ch of Array.from(m.word)) {
+    const i = pool.indexOf(ch);
+    if (i === -1) { ok = false; break; }
+    pool.splice(i, 1);
+    const isCalled = !calledAssigned && ch === kinds[0];
+    if (isCalled) calledAssigned = true;
+    ordered.push({ kind: ch, called: isCalled });
+  }
+
+  if (!ok || pool.length > 0) {
+    return kinds.map((k, i) => ({ kind: k, called: i === 0 }));
+  }
+  return ordered;
+}
+
+function tileHtml(kind, selected, selectable, small, idx, isDrawn, tileId, wrapClass) {
   const cls = ['tile'];
 
   if (small) cls.push('small');
@@ -344,7 +382,7 @@ function tileHtml(kind, selected, selectable, small, idx, isDrawn, tileId) {
    * 付けることで、牌1枚分の四角い形のまま奥に重なるようにする。
    */
   return `
-    <div class="tile-wrap">
+    <div class="tile-wrap${wrapClass ? ' ' + wrapClass : ''}">
       <div class="tile3d">
         <div class="${cls.join(' ')} tile-front" ${dataAttrs}>${kind || ''}</div>
         <div class="tile-face tile-back"></div>

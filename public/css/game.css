@@ -13,11 +13,11 @@
   --tile-side-mid: #b8aa88;
   --tile-side-dark: #746a53;
 
-  --tile-back: #315c56;
+  --tile-back: #263b60;
 
   /* 側面: 表に近い半分=白、裏に近い半分=緑(本物の牌風) */
   --tile-side-white: #fffef9;
-  --tile-side-green: #315c56;
+  --tile-side-green: #263b60;
 }
 
 html,
@@ -45,9 +45,9 @@ body {
   background:
     radial-gradient(
       ellipse at 50% 45%,
-      #14503f 0%,
-      #0d3a2f 48%,
-      #08271f 100%
+      #1f7a5e 0%,
+      #17614a 48%,
+      #0f4636 100%
     );
 
   box-shadow:
@@ -711,13 +711,58 @@ body {
   z-index: 41;
 }
 
-.meld-row {
-  display: flex;
-  gap: 4px;
-  margin-bottom: 4px;
+/*
+ * 鳴いてできた単語。
+ * .meld-layer は卓と同じ大きさの透明な層で、卓の中心まわりに回転させるだけ
+ * (自分=0度 / 下家=-90度 / 対面=180度 / 上家=90度)。
+ * その中で .meld-row を「その人から見た右下」に置くので、4人とも同じ指定で済む。
+ * 単語は右端から左へ並び、新しく鳴いた単語ほど左に追加されるため、卓の外に出ない。
+ */
+.meld-layer {
+  position: absolute;
+  inset: 0;
 
-  position: relative;
+  pointer-events: none;
+  transform-style: preserve-3d;
+  transform-origin: 50% 50%;
+
   z-index: 41;
+}
+
+.meld-layer-r1 { transform: rotate(-90deg); }
+.meld-layer-r2 { transform: rotate(180deg); }
+.meld-layer-r3 { transform: rotate(90deg); }
+
+.meld-row {
+  position: absolute;
+
+  /* 四隅にはプレイヤー名のタグがあるので、その分だけ内側に寄せる */
+  right: 36px;
+  bottom: 38px;
+
+  /* 単語は横一列。新しい単語ほど左に追加される(先頭が一番右)。 */
+  display: flex;
+  flex-direction: row-reverse;
+  align-items: flex-end;
+  gap: 8px;
+
+  transform-style: preserve-3d;
+}
+
+/* 自分の鳴き牌は、自分の手牌と同じ大きさにする(他家の手牌は既定の大きさ) */
+.meld-layer-self .meld-row {
+  --tile-w: 40px;
+  --river-tile-h: 56px;
+}
+
+/* 1単語。ここに preserve-3d が無いと中の牌の立体感が潰れて平らになる */
+.meld-word {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-end;
+  gap: 2px;
+
+  transform-style: preserve-3d;
 }
 
 
@@ -890,7 +935,7 @@ body {
 
   box-sizing: border-box;
 
-  border: 1px solid #243f3b;
+  border: 1px solid #1a2a47;
   border-radius: 5px;
 
   /* 裏面は単色にする(模様やハイライトは無し) */
@@ -1417,6 +1462,28 @@ body {
 
   transform: translateZ(3px);
   transform-origin: center bottom;
+}
+
+/*
+ * 鳴いた牌：時計回りに90度回す。
+ * transformは見た目だけを回して、並びに使う箱の大きさは変えないので、
+ * 箱のほうを横長(縦横を入れ替え)にして、他の牌を回した分だけずらす。
+ * 中の牌は箱の中央に置いて、中心まわりに回転させる。
+ */
+.meld-row .tile-wrap.meld-called {
+  width: var(--river-tile-h);
+  height: var(--tile-w);
+}
+
+.meld-row .tile-wrap.meld-called > .tile3d {
+  position: absolute;
+  left: calc((var(--river-tile-h) - var(--tile-w)) / 2);
+  top: calc((var(--tile-w) - var(--river-tile-h)) / 2);
+
+  transform-origin: center center;
+  transform:
+    translateZ(3px)
+    rotate(90deg);
 }
 
 
