@@ -323,7 +323,27 @@ function render(s) {
 
   renderActionBar();
   renderDevWall(s);
+  positionSelfHand();
 }
+
+/*
+ * 自分の手牌は卓の遠近法に乗せず、平面のまま表示する。
+ * そのため卓(transform で台形に射影されている)の外に置き、
+ * 卓の手前中央にある目印(#selfHandAnchor)の画面上の位置に合わせる。
+ */
+function positionSelfHand() {
+  const anchor = document.getElementById('selfHandAnchor');
+  const layer = document.getElementById('selfHandLayer');
+  if (!anchor || !layer) return;
+
+  const r = anchor.getBoundingClientRect();
+  layer.style.left = (r.left + r.width / 2) + 'px';
+  layer.style.top = r.bottom + 'px';
+}
+
+window.addEventListener('resize', positionSelfHand);
+window.addEventListener('scroll', positionSelfHand, { passive: true });
+window.addEventListener('load', positionSelfHand);
 
 /*
  * 鳴いてできた単語を、単語の文字順に並べた牌リストにする。

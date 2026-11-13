@@ -1151,9 +1151,8 @@ body {
 }
 
 .seat.bottom .hand-row .tile3d {
-  /* 下面が卓に接するよう、厚みの半分だけ持ち上げる(河・鳴きと同じ) */
   transform:
-    translateZ(calc(var(--tile-depth) / 2));
+    translateZ(6px);
   transform-origin: center bottom;
 }
 
@@ -1370,11 +1369,10 @@ body {
   width: var(--tile-w);
   height: var(--river-tile-h);
 
-  /*
-   * 厚みは全ての牌で共通(:root の --tile-depth)。
-   * 下面が卓の面にぴったり接するよう、厚みの半分だけ持ち上げる。
-   */
-  transform: translateZ(calc(var(--tile-depth) / 2));
+  /* 河の牌は薄い直方体に統一する */
+  --tile-depth: 12px;
+
+  transform: translateZ(4.5px);
   transform-origin: center bottom;
   z-index: 31;
 }
@@ -1464,7 +1462,7 @@ body {
   width: var(--tile-w);
   height: var(--river-tile-h);
 
-  /* 厚みは全ての牌で共通(:root の --tile-depth)。下面が卓に接するよう半分持ち上げる */
+  /* 厚みは標準の牌と同じ(:root の --tile-depth)。下面が卓に接するよう半分持ち上げる */
   transform: translateZ(calc(var(--tile-depth) / 2));
   transform-origin: center bottom;
 }
@@ -1601,4 +1599,113 @@ body {
 /* 牌の文字を少し大きくする */
 .seat.bottom .tile3d > .tile-front {
   font-size: 20px;
+}
+
+
+/* =========================================================
+   自分の手牌: 遠近法なしの平面表示(斜め上から見た見え方)
+   ========================================================= */
+
+/*
+ * 卓の目印。卓の手前中央(元の手牌の位置)にあり、
+ * この点の画面上の座標に手牌の層(.self-hand-layer)を合わせる。
+ */
+.self-hand-anchor {
+  position: absolute;
+  left: 50%;
+  bottom: 3%;
+
+  width: 1px;
+  height: 1px;
+
+  pointer-events: none;
+}
+
+/* 卓の外に出した手牌の層。位置は table.js の positionSelfHand() が決める */
+.self-hand-layer {
+  position: fixed;
+  left: 50%;
+  top: 0;
+
+  transform: translate(-50%, -100%);
+  z-index: 45;
+
+  pointer-events: none;
+}
+
+.self-hand-layer .seat.bottom {
+  position: static;
+  transform: none !important;
+  transform-style: flat;
+}
+
+.self-hand-layer .seat.bottom .hand-row {
+  transform-style: flat;
+}
+
+.self-hand-layer .seat.bottom .tile-wrap {
+  transform-style: flat;
+}
+
+/*
+ * 牌は立体を使わず、表面(正面)を歪ませずにそのまま描く。
+ * 斜め上から見た見え方にするため、見える面は
+ *   ・表面
+ *   ・上側の側面(表面の少し上に見える帯)
+ * だけにして、下・左右の側面と裏面は消す(どうせ見えない)。
+ */
+.self-hand-layer .seat.bottom .hand-row .tile3d {
+  transform: none;
+  transform-style: flat;
+  perspective: none;
+}
+
+.self-hand-layer .seat.bottom .hand-row .tile3d > .tile-front,
+.self-hand-layer .seat.bottom .hand-row .tile3d > .tile-front.selected {
+  transform: none !important;
+}
+
+.self-hand-layer .seat.bottom .hand-row .tile3d > .tile-back,
+.self-hand-layer .seat.bottom .hand-row .tile3d > .tile-left,
+.self-hand-layer .seat.bottom .hand-row .tile3d > .tile-right,
+.self-hand-layer .seat.bottom .hand-row .tile3d > .tile-bottom {
+  display: none !important;
+}
+
+/* 上側の側面: 表面の上にはみ出す帯。厚みの半分だけ見える。表に近い半分が白、奥の半分が牌の裏の色 */
+.self-hand-layer .seat.bottom .hand-row .tile3d > .tile-top {
+  display: block;
+
+  left: 0;
+  top: auto;
+
+  /* 表面の下に3pxもぐらせて、角の丸みの継ぎ目を隠す */
+  bottom: calc(100% - 3px);
+
+  width: var(--tile-w);
+  height: calc(var(--tile-depth) / 2 + 3px);
+
+  border-radius: 5px 5px 0 0;
+
+  background:
+    linear-gradient(
+      180deg,
+      var(--tile-side-green) 0,
+      var(--tile-side-green) calc(var(--tile-depth) / 4),
+      var(--tile-side-white) calc(var(--tile-depth) / 4),
+      var(--tile-side-white) 100%
+    );
+
+  transform: none;
+  z-index: 5;
+}
+
+/* ツモ牌は表面だけ右にずれているので、上側の側面も同じだけずらす */
+.self-hand-layer .seat.bottom .hand-row .tile3d:has(> .tile-front.drawn-tile) > .tile-top {
+  margin-left: 14px;
+}
+
+/* 選択時: 表面も上側の側面も一緒に持ち上げる(奥行き方向には動かさない) */
+.self-hand-layer .seat.bottom .hand-row .tile-wrap:has(> .tile3d > .tile-front.selected) > .tile3d {
+  transform: translateY(-11px) !important;
 }

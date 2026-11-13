@@ -97,9 +97,8 @@
   <div class="meld-layer meld-layer-r3" id="meld-layer-r3"><div class="meld-row" id="meld-r3"></div></div>
 
   <!-- 座席(手牌のみ) -->
-  <div class="seat bottom" id="seat-self">
-    <div class="hand-row" id="hand-self"></div>
-  </div>
+  <!-- 自分の手牌の位置合わせ用の目印(卓の手前中央)。手牌自体は卓の外の .self-hand-layer にある -->
+  <div class="self-hand-anchor" id="selfHandAnchor"></div>
   <div class="seat right" id="seat-r1">
     <div class="hand-row" id="hand-r1"></div>
   </div>
@@ -115,6 +114,13 @@
   <div class="player-tag corner-r1" id="tag-r1"></div>
   <div class="player-tag corner-r2" id="tag-r2"></div>
   <div class="player-tag corner-r3" id="tag-r3"></div>
+</div>
+
+<!-- 自分の手牌: 卓の遠近法の射影から切り離した平面表示。位置だけ卓の手前中央(selfHandAnchor)に合わせる -->
+<div class="self-hand-layer" id="selfHandLayer">
+  <div class="seat bottom" id="seat-self">
+      <div class="hand-row" id="hand-self"></div>
+    </div>
 </div>
 
 <div class="action-bar" id="actionBar"></div>
