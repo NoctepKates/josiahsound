@@ -413,7 +413,7 @@ body {
   box-sizing: border-box;
 
   /* 面の縁は黄ばませず、ごく薄い灰色の細線にする */
-  border: 3px solid #ffffff;
+  border: 1px solid #ffffff;
   border-radius: var(--tile-r);
 
   /* 面本体は真っ白(文字色はそのまま) */
@@ -936,7 +936,7 @@ body {
 
   box-sizing: border-box;
 
-  border: 3px solid #39588e;
+  border: 1px solid #39588e;
   border-radius: var(--tile-r);
 
   /* 裏面は単色にする(模様やハイライトは無し) */
