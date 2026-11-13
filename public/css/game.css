@@ -925,7 +925,7 @@ body {
 
   box-sizing: border-box;
 
-  border: 1px solid #263b60;
+  border: 2px solid #39588e;
   border-radius: var(--tile-r);
 
   /* 裏面は単色にする(模様やハイライトは無し) */
