@@ -410,6 +410,14 @@ function tileHtml(kind, selected, selectable, small, idx, isDrawn, tileId, wrapC
         <div class="tile-face tile-right"></div>
         <div class="tile-face tile-top"></div>
         <div class="tile-face tile-bottom"></div>
+        <div class="tile-face tile-c tile-c1"></div>
+        <div class="tile-face tile-c tile-c2"></div>
+        <div class="tile-face tile-c tile-c3"></div>
+        <div class="tile-face tile-c tile-c4"></div>
+        <div class="tile-face tile-c tile-c5"></div>
+        <div class="tile-face tile-c tile-c6"></div>
+        <div class="tile-face tile-c tile-c7"></div>
+        <div class="tile-face tile-c tile-c8"></div>
       </div>
     </div>
   `;

@@ -6,6 +6,9 @@
 
   --tile-depth: 24px;
 
+  /* 牌の角丸の半径。表面・裏面・側面のカーブがこの値で揃う */
+  --tile-r: 5px;
+
   --tile-face-top: #ffffff;
   --tile-face-bottom: #ffffff;
 
@@ -13,11 +16,11 @@
   --tile-side-mid: #b8aa88;
   --tile-side-dark: #746a53;
 
-  --tile-back: #5077b9;
+  --tile-back: #39588e;
 
   /* 側面: 表に近い半分=白、裏に近い半分=緑(本物の牌風) */
   --tile-side-white: #ffffff;
-  --tile-side-green: #5077b9;
+  --tile-side-green: #39588e;
 }
 
 html,
@@ -411,7 +414,7 @@ body {
 
   /* 面の縁は黄ばませず、ごく薄い灰色の細線にする */
   border: 1px solid #e2e2e2;
-  border-radius: 5px 5px 4px 4px;
+  border-radius: var(--tile-r);
 
   /* 面本体は真っ白(文字色はそのまま) */
   background: #ffffff;
@@ -514,8 +517,8 @@ body {
     ),
     repeating-linear-gradient(
       45deg,
-      #5077b9 0px,
-      #5077b9 3px,
+      #39588e 0px,
+      #39588e 3px,
       #30466f 3px,
       #30466f 6px
     );
@@ -549,7 +552,7 @@ body {
 .tile.small {
   --tile-depth: 6px;
 
-  border-radius: 4px 4px 3px 3px;
+  border-radius: var(--tile-r);
 }
 
 
@@ -813,7 +816,7 @@ body {
   flex: 0 0 auto;
 
   transform-style: preserve-3d;
-  border-radius: 5px 5px 4px 4px;
+  border-radius: var(--tile-r);
   overflow: visible;
 }
 
@@ -923,7 +926,7 @@ body {
   box-sizing: border-box;
 
   border: 1px solid #263b60;
-  border-radius: 5px;
+  border-radius: var(--tile-r);
 
   /* 裏面は単色にする(模様やハイライトは無し) */
   background: var(--tile-back);
@@ -949,7 +952,7 @@ body {
   top: 50%;
 
   width: var(--tile-depth);
-  height: var(--river-tile-h);
+  height: calc(var(--river-tile-h) - 2 * var(--tile-r) + 1px);
 
   border: 0;
   box-sizing: border-box;
@@ -998,7 +1001,7 @@ body {
   top: 50%;
 
   width: var(--tile-depth);
-  height: var(--river-tile-h);
+  height: calc(var(--river-tile-h) - 2 * var(--tile-r) + 1px);
 
   border: 0;
   box-sizing: border-box;
@@ -1036,7 +1039,7 @@ body {
   left: 50%;
   top: 50%;
 
-  width: var(--tile-w);
+  width: calc(var(--tile-w) - 2 * var(--tile-r) + 1px);
   height: var(--tile-depth);
 
   border: 0;
@@ -1075,7 +1078,7 @@ body {
   left: 50%;
   top: 50%;
 
-  width: var(--tile-w);
+  width: calc(var(--tile-w) - 2 * var(--tile-r) + 1px);
   height: var(--tile-depth);
 
   border: 0;
@@ -1264,7 +1267,7 @@ body {
   color: transparent;
 
   /* こちらも単色にする */
-  background: #5077b9;
+  background: #39588e;
 
   border-color: #4c638c;
 }
@@ -1690,4 +1693,137 @@ body {
 /* 選択時: 表面も上側の側面も一緒に持ち上げる(奥行き方向には動かさない) */
 .self-hand-layer .seat.bottom .hand-row .tile-wrap:has(> .tile3d > .tile-front.selected) > .tile3d {
   transform: translateY(-11px) !important;
+}
+
+
+/* =========================================================
+   角の側面(丸みに沿って曲げる)
+   ========================================================= */
+
+/*
+ * 表面・裏面は角が丸いので、平らな側面4枚だけだと角に隙間ができる。
+ * 角の1/4円を、細い平面2枚(45度ずつ)で折れ線近似してつなぐ。
+ * 各パーツは「接線方向の幅 x 厚み」の板で、
+ *   rotateX(90deg) で厚み方向を奥行き(z)に向け、
+ *   rotateZ(接線の向き) で円弧の向きに合わせ、
+ *   translate(dx, dy) で円弧の中点に置く。
+ * 色は他の側面と同じく、奥側の半分が紺・表側の半分が白。
+ */
+.tile3d > .tile-c {
+  left: 50%;
+  top: 50%;
+
+  /* 円弧の弦の長さ(2 * r * sin(22.5度)) + 継ぎ目の隙間隠し */
+  width: calc(var(--tile-r) * 0.7654 + 0.6px);
+  height: var(--tile-depth);
+
+  border: 0;
+  box-sizing: border-box;
+
+  background:
+    linear-gradient(
+      180deg,
+      var(--tile-side-green) 0%,
+      var(--tile-side-green) 50%,
+      var(--tile-side-white) 50%,
+      var(--tile-side-white) 100%
+    );
+
+  transform-origin: center center;
+
+  z-index: 3;
+  pointer-events: none;
+}
+
+.tile3d > .tile-c1 {
+  transform:
+    translate(-50%, -50%)
+    translate(
+      calc(var(--tile-w) * -0.5 + var(--tile-r) * 0.1464),
+      calc(var(--river-tile-h) * -0.5 + var(--tile-r) * 0.6464)
+    )
+    rotateZ(292.5deg)
+    rotateX(90deg);
+}
+
+.tile3d > .tile-c2 {
+  transform:
+    translate(-50%, -50%)
+    translate(
+      calc(var(--tile-w) * -0.5 + var(--tile-r) * 0.6464),
+      calc(var(--river-tile-h) * -0.5 + var(--tile-r) * 0.1464)
+    )
+    rotateZ(337.5deg)
+    rotateX(90deg);
+}
+
+.tile3d > .tile-c3 {
+  transform:
+    translate(-50%, -50%)
+    translate(
+      calc(var(--tile-w) * 0.5 + var(--tile-r) * -0.6464),
+      calc(var(--river-tile-h) * -0.5 + var(--tile-r) * 0.1464)
+    )
+    rotateZ(382.5deg)
+    rotateX(90deg);
+}
+
+.tile3d > .tile-c4 {
+  transform:
+    translate(-50%, -50%)
+    translate(
+      calc(var(--tile-w) * 0.5 + var(--tile-r) * -0.1464),
+      calc(var(--river-tile-h) * -0.5 + var(--tile-r) * 0.6464)
+    )
+    rotateZ(427.5deg)
+    rotateX(90deg);
+}
+
+.tile3d > .tile-c5 {
+  transform:
+    translate(-50%, -50%)
+    translate(
+      calc(var(--tile-w) * 0.5 + var(--tile-r) * -0.1464),
+      calc(var(--river-tile-h) * 0.5 + var(--tile-r) * -0.6464)
+    )
+    rotateZ(112.5deg)
+    rotateX(90deg);
+}
+
+.tile3d > .tile-c6 {
+  transform:
+    translate(-50%, -50%)
+    translate(
+      calc(var(--tile-w) * 0.5 + var(--tile-r) * -0.6464),
+      calc(var(--river-tile-h) * 0.5 + var(--tile-r) * -0.1464)
+    )
+    rotateZ(157.5deg)
+    rotateX(90deg);
+}
+
+.tile3d > .tile-c7 {
+  transform:
+    translate(-50%, -50%)
+    translate(
+      calc(var(--tile-w) * -0.5 + var(--tile-r) * 0.6464),
+      calc(var(--river-tile-h) * 0.5 + var(--tile-r) * -0.1464)
+    )
+    rotateZ(202.5deg)
+    rotateX(90deg);
+}
+
+.tile3d > .tile-c8 {
+  transform:
+    translate(-50%, -50%)
+    translate(
+      calc(var(--tile-w) * -0.5 + var(--tile-r) * 0.1464),
+      calc(var(--river-tile-h) * 0.5 + var(--tile-r) * -0.6464)
+    )
+    rotateZ(247.5deg)
+    rotateX(90deg);
+}
+
+/* 自分の手牌は平面表示(上側の帯だけ)なので、角パーツは使わない */
+.self-hand-layer .seat.bottom .hand-row .tile3d > .tile-c {
+  display: none !important;
 }
