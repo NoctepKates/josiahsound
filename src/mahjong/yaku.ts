@@ -86,6 +86,14 @@ export const specialYakus: SpecialYaku[] = [
     }
   },
 
+  {
+    name: '二度と名乗るな',
+    han: 3,
+
+    check(words) {
+      return allHaveTag(words, 'SAENS');
+    }
+  }
 ];
 
 

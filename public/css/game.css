@@ -4,7 +4,7 @@
   --compass-size: 195px;
   --river-tile-h: 42px;
 
-  --tile-depth: 16px;
+  --tile-depth: 24px;
 
   --tile-face-top: #fffef9;
   --tile-face-bottom: #e6dbc0;
@@ -56,11 +56,16 @@ body {
     inset 0 0 0 2px rgba(244, 214, 145, .22),
     inset 0 0 35px rgba(0, 0, 0, .42);
 
-  /* 卓全体の共通視点 */
-  perspective: 1200px;
-  perspective-origin: 50% 100%;
-
+  /*
+   * 卓全体の遠近法。
+   * 以前は perspective プロパティ(子要素にだけ効く)を使っていたため、
+   * 卓自身は遠近法がかからず長方形のまま傾くだけだった。
+   * transform の perspective() は卓自身も含めて射影するので、
+   * 真上から見て長方形の卓が、手前が広く奥が狭い台形に見える。
+   * 卓の上の牌・河・コンパスも同じ射影に乗るため、奥や左右の席の並びは斜めになる。
+   */
   transform:
+    perspective(1200px)
     rotateX(26deg)
     translateY(-60px);
 
@@ -560,7 +565,7 @@ body {
    ========================================================= */
 
 .tile.small {
-  --tile-depth: 4px;
+  --tile-depth: 6px;
 
   border-radius: 4px 4px 3px 3px;
 }
@@ -1365,9 +1370,9 @@ body {
   height: var(--river-tile-h);
 
   /* 河の牌は薄い直方体に統一する */
-  --tile-depth: 8px;
+  --tile-depth: 12px;
 
-  transform: translateZ(3px);
+  transform: translateZ(4.5px);
   transform-origin: center bottom;
   z-index: 31;
 }
@@ -1458,9 +1463,9 @@ body {
   height: var(--river-tile-h);
 
   /* 河の牌と同じ厚さにする */
-  --tile-depth: 8px;
+  --tile-depth: 12px;
 
-  transform: translateZ(3px);
+  transform: translateZ(4.5px);
   transform-origin: center bottom;
 }
 
@@ -1482,7 +1487,7 @@ body {
 
   transform-origin: center center;
   transform:
-    translateZ(3px)
+    translateZ(4.5px)
     rotate(90deg);
 }
 
