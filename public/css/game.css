@@ -4,7 +4,7 @@
   --compass-size: 195px;
   --river-tile-h: 42px;
 
-  --tile-depth: 24px;
+  --tile-depth: 16px;
 
   /* 牌の角丸の半径。表面・裏面・側面のカーブがこの値で揃う */
   --tile-r: 5px;
@@ -413,13 +413,13 @@ body {
   box-sizing: border-box;
 
   /* 面の縁は黄ばませず、ごく薄い灰色の細線にする */
-  border: 1px solid #e2e2e2;
+  border: 3px solid #ffffff;
   border-radius: var(--tile-r);
 
   /* 面本体は真っ白(文字色はそのまま) */
   background: #ffffff;
 
-  color: #27324a;
+  color: #000000;
 
   box-shadow:
     inset 1px 1px 0 rgba(255,255,255,.96),
@@ -892,6 +892,17 @@ body {
 
 
 /*
+ * 小さい牌(.tile.small、河など)は2D用に --tile-depth: 6px を持っているため、
+ * 表面だけ厚みを6pxと解釈して translateZ が3pxになり、
+ * 側面(厚み12px→手前端は+6px)より3px奥に沈んでしまっていた。
+ * 表面は必ず親の .tile3d と同じ厚みを使う。
+ */
+.tile3d > .tile-front.tile {
+  --tile-depth: inherit;
+}
+
+
+/*
  * data-kindを持つ表面だけクリック可能。
  */
 .tile3d > .tile-front[data-kind] {
@@ -925,7 +936,7 @@ body {
 
   box-sizing: border-box;
 
-  border: 2px solid #39588e;
+  border: 3px solid #39588e;
   border-radius: var(--tile-r);
 
   /* 裏面は単色にする(模様やハイライトは無し) */
