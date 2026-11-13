@@ -307,7 +307,7 @@ function render(s) {
                     t.kind,
                     false,
                     false,
-                    divKey !== 'self',
+                    false,
                     undefined,
                     false,
                     undefined,

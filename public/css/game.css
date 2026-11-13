@@ -6,18 +6,18 @@
 
   --tile-depth: 24px;
 
-  --tile-face-top: #fffef9;
-  --tile-face-bottom: #e6dbc0;
+  --tile-face-top: #ffffff;
+  --tile-face-bottom: #ffffff;
 
   --tile-side-light: #eee5ce;
   --tile-side-mid: #b8aa88;
   --tile-side-dark: #746a53;
 
-  --tile-back: #263b60;
+  --tile-back: #5077b9;
 
   /* 側面: 表に近い半分=白、裏に近い半分=緑(本物の牌風) */
-  --tile-side-white: #fffef9;
-  --tile-side-green: #263b60;
+  --tile-side-white: #ffffff;
+  --tile-side-green: #5077b9;
 }
 
 html,
@@ -409,39 +409,21 @@ body {
 
   box-sizing: border-box;
 
-  border: 1px solid var(--tile-side-mid);
+  /* 面の縁は黄ばませず、ごく薄い灰色の細線にする */
+  border: 1px solid #e2e2e2;
   border-radius: 5px 5px 4px 4px;
 
-  /*
-   * ハイライトは円形(radial)グラデーションにする。
-   * 直線(linear)グラデーションは「115deg」のように
-   * 画面上の固定方向を向いてしまうため、3D回転している
-   * 牌ではその回転具合によって光の入り方がバラバラに
-   * ずれてしまう。円形グラデーションには方向という概念が
-   * 無いので、牌がどれだけ回転していても常に同じに見える。
-   */
-  background:
-    radial-gradient(
-      ellipse 75% 55% at 50% 28%,
-      rgba(255,255,255,.78) 0%,
-      rgba(255,255,255,.28) 42%,
-      rgba(255,255,255,0) 72%
-    ),
-    linear-gradient(
-      180deg,
-      var(--tile-face-top) 0%,
-      #f8f1df 46%,
-      var(--tile-face-bottom) 100%
-    );
+  /* 面本体は真っ白(文字色はそのまま) */
+  background: #ffffff;
 
   color: #27324a;
 
   box-shadow:
     inset 1px 1px 0 rgba(255,255,255,.96),
-    inset -1px -2px 0 rgba(110,95,66,.20),
-    0 1px 0 #b5a984,
-    1px 3px 0 #a39575,
-    2px 5px 0 #8a7e63,
+    inset -1px -2px 0 rgba(0,0,0,.12),
+    0 1px 0 #c4c4c4,
+    1px 3px 0 #adadad,
+    2px 5px 0 #8f8f8f,
     4px 7px 6px rgba(0,0,0,.42);
 
   transform-style: preserve-3d;
@@ -532,8 +514,8 @@ body {
     ),
     repeating-linear-gradient(
       45deg,
-      #263b60 0px,
-      #263b60 3px,
+      #5077b9 0px,
+      #5077b9 3px,
       #30466f 3px,
       #30466f 6px
     );
@@ -754,8 +736,8 @@ body {
   transform-style: preserve-3d;
 }
 
-/* 自分の鳴き牌は、自分の手牌と同じ大きさにする(他家の手牌は既定の大きさ) */
-.meld-layer-self .meld-row {
+/* 鳴き牌は4人とも同じ大きさ(自分の手牌と同じ40x56)。遠近法による見かけの差だけが残る */
+.meld-row {
   --tile-w: 40px;
   --river-tile-h: 56px;
 }
@@ -940,7 +922,7 @@ body {
 
   box-sizing: border-box;
 
-  border: 1px solid #1a2a47;
+  border: 1px solid #263b60;
   border-radius: 5px;
 
   /* 裏面は単色にする(模様やハイライトは無し) */
@@ -1282,7 +1264,7 @@ body {
   color: transparent;
 
   /* こちらも単色にする */
-  background: #263b60;
+  background: #5077b9;
 
   border-color: #4c638c;
 }
@@ -1372,7 +1354,7 @@ body {
   /* 河の牌は薄い直方体に統一する */
   --tile-depth: 12px;
 
-  transform: translateZ(4.5px);
+  transform: translateZ(calc(var(--tile-depth) / 2));
   transform-origin: center bottom;
   z-index: 31;
 }
