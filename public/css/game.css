@@ -962,7 +962,8 @@ body {
   left: 50%;
   top: 50%;
 
-  width: var(--tile-depth);
+  /* 厚み+1px: 表面・裏面との継ぎ目に隙間(細い線)が出ないよう両端を0.5pxずつ重ねる */
+  width: calc(var(--tile-depth) + 1px);
   height: calc(var(--river-tile-h) - 2 * var(--tile-r) + 1px);
 
   border: 0;
@@ -1011,7 +1012,8 @@ body {
   left: 50%;
   top: 50%;
 
-  width: var(--tile-depth);
+  /* 厚み+1px: 表面・裏面との継ぎ目に隙間(細い線)が出ないよう両端を0.5pxずつ重ねる */
+  width: calc(var(--tile-depth) + 1px);
   height: calc(var(--river-tile-h) - 2 * var(--tile-r) + 1px);
 
   border: 0;
@@ -1051,7 +1053,7 @@ body {
   top: 50%;
 
   width: calc(var(--tile-w) - 2 * var(--tile-r) + 1px);
-  height: var(--tile-depth);
+  height: calc(var(--tile-depth) + 1px);
 
   border: 0;
   box-sizing: border-box;
@@ -1090,7 +1092,7 @@ body {
   top: 50%;
 
   width: calc(var(--tile-w) - 2 * var(--tile-r) + 1px);
-  height: var(--tile-depth);
+  height: calc(var(--tile-depth) + 1px);
 
   border: 0;
   box-sizing: border-box;
@@ -1726,7 +1728,7 @@ body {
 
   /* 円弧の弦の長さ(2 * r * sin(22.5度)) + 継ぎ目の隙間隠し */
   width: calc(var(--tile-r) * 0.7654 + 0.6px);
-  height: var(--tile-depth);
+  height: calc(var(--tile-depth) + 1px);
 
   border: 0;
   box-sizing: border-box;
