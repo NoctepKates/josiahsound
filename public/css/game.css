@@ -1151,8 +1151,9 @@ body {
 }
 
 .seat.bottom .hand-row .tile3d {
+  /* 下面が卓に接するよう、厚みの半分だけ持ち上げる(河・鳴きと同じ) */
   transform:
-    translateZ(6px);
+    translateZ(calc(var(--tile-depth) / 2));
   transform-origin: center bottom;
 }
 
@@ -1369,10 +1370,11 @@ body {
   width: var(--tile-w);
   height: var(--river-tile-h);
 
-  /* 河の牌は薄い直方体に統一する */
-  --tile-depth: 12px;
-
-  transform: translateZ(4.5px);
+  /*
+   * 厚みは全ての牌で共通(:root の --tile-depth)。
+   * 下面が卓の面にぴったり接するよう、厚みの半分だけ持ち上げる。
+   */
+  transform: translateZ(calc(var(--tile-depth) / 2));
   transform-origin: center bottom;
   z-index: 31;
 }
@@ -1462,10 +1464,8 @@ body {
   width: var(--tile-w);
   height: var(--river-tile-h);
 
-  /* 河の牌と同じ厚さにする */
-  --tile-depth: 12px;
-
-  transform: translateZ(4.5px);
+  /* 厚みは全ての牌で共通(:root の --tile-depth)。下面が卓に接するよう半分持ち上げる */
+  transform: translateZ(calc(var(--tile-depth) / 2));
   transform-origin: center bottom;
 }
 
@@ -1487,7 +1487,7 @@ body {
 
   transform-origin: center center;
   transform:
-    translateZ(4.5px)
+    translateZ(calc(var(--tile-depth) / 2))
     rotate(90deg);
 }
 
