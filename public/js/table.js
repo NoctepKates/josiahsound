@@ -108,6 +108,21 @@ function connect() {
   };
 }
 
+// ツモ牌(手番で引いた牌)を、手牌の並びの一番右に移す。
+// ドラッグで手牌の途中に入れた直後は、動かさずにそのままにする。
+let drawnTileManuallyPlaced = null;
+
+function moveDrawnTileToEnd(drawnId) {
+  if (!drawnId) return;
+  if (drawnTileManuallyPlaced === drawnId) return;
+
+  const i = handOrder.findIndex((t) => t.id === drawnId);
+  if (i === -1 || i === handOrder.length - 1) return;
+
+  const [t] = handOrder.splice(i, 1);
+  handOrder.push(t);
+}
+
 function reconcileHandOrder(newTiles) {
   const remaining = [...newTiles];
   const kept = [];
@@ -248,6 +263,10 @@ function render(s) {
     if (divKey === 'self') {
       const drawnId = state.yourDrawnTile?.id ?? null;
 
+      // ツモ牌を手牌の一番右に置く(再読み込み直後は牌が牌種順に並ぶため、
+      // ツモ牌が途中に入り、間隔(14px)のぶん後ろの牌がずれて見えていた)
+      moveDrawnTileToEnd(drawnId);
+
       const mainTiles = handOrder.map((tile, idx) =>
         tileHtml(
           tile.kind,
@@ -255,7 +274,7 @@ function render(s) {
           true,
           false,
           idx,
-          tile.id === drawnId,
+          tile.id === drawnId && idx === handOrder.length - 1,
           tile.id
         )
       );
@@ -694,6 +713,11 @@ function attachHandHandlers(handEl) {
       const insertAt = Math.min(toIdx, handOrder.length);
       handOrder.splice(insertAt, 0, moved);
 
+      // ツモ牌を自分で手牌の途中に入れたときは、次の描画で右端に戻さない
+      if (moved.id === state?.yourDrawnTile?.id) {
+        drawnTileManuallyPlaced = moved.id;
+      }
+
       dragFromIdx = null;
       renderHandOnly();
     };
@@ -736,6 +760,8 @@ function renderHandOnly() {
   const handEl = document.getElementById('hand-self');
   if (!handEl) return;
 
+  const drawnId = state?.yourDrawnTile?.id ?? null;
+
   const mainTiles = handOrder.map((tile, idx) =>
     tileHtml(
       tile.kind,
@@ -743,7 +769,8 @@ function renderHandOnly() {
       true,
       false,
       idx,
-      false,
+      // ツモ牌が一番右にあるときだけ、手牌との間隔をあける
+      tile.id === drawnId && idx === handOrder.length - 1,
       tile.id
     )
   );
