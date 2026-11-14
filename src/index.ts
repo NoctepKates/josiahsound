@@ -4,13 +4,8 @@ import { GameRoom } from './GameRoom';
 import { Lobby } from './Lobby';
 
 import { ALL_TILE_KINDS } from './mahjong/tiles';
-import {
-  canDeclareRiichiHand,
-  canWin,
-  findAllDecompositions,
-  isTenpai,
-  type WordDef,
-} from './mahjong/words';
+import { type WordDef } from './mahjong/words';
+import { analyzeHand } from './mahjong/analysis';
 
 export { GameRoom, Lobby };
 
@@ -192,6 +187,13 @@ export default {
 
         const body = await request.json() as {
           hand?: unknown;
+          options?: {
+            riichi?: boolean;
+            ippatsu?: boolean;
+            isDealer?: boolean;
+            winType?: string;
+            doraCount?: number;
+          };
         };
 
         if (
@@ -229,35 +231,17 @@ export default {
 
         const dict = await loadDebugDict(env);
 
-        // 14枚なら和了形を実際に探索
-        const decompositions14 =
-          hand.length === 14
-            ? findAllDecompositions(hand, dict, 100)
-            : [];
+        const o = body.options || {};
+        const analysis = analyzeHand(hand, dict, {
+          riichi: !!o.riichi,
+          ippatsu: !!o.ippatsu,
+          isDealer: !!o.isDealer,
+          winType: o.winType === 'ron' ? 'ron' : 'tsumo',
+          doraCount: Math.max(0, Math.floor(Number(o.doraCount) || 0)),
+        });
 
-        // 13枚なら全牌種を試して待ちを求める
-        const waits =
-          hand.length === 13
-            ? ALL_TILE_KINDS.filter((kind) =>
-                canWin([...hand, kind], dict)
-              )
-            : [];
-
-        // 14枚なら各打牌候補についてテンパイになるか調べる
-        const riichiDiscards =
-          hand.length === 14
-            ? [...new Set(hand)].filter((discardKind) => {
-                const rest = [...hand];
-                const index = rest.indexOf(discardKind);
-
-                if (index < 0) return false;
-
-                rest.splice(index, 1);
-
-                return isTenpai(rest, dict);
-              })
-            : [];
-
+        // 実戦(GameRoom)と同じ判定関数(analyzeHand)の結果をそのまま返す。
+        // 判定の定義は src/mahjong/analysis.ts の冒頭コメントを参照。
         return json({
           ok: true,
 
@@ -265,21 +249,18 @@ export default {
           tileKindCount: ALL_TILE_KINDS.length,
           handLength: hand.length,
 
-          canWin:
-            hand.length === 14 &&
-            decompositions14.length > 0,
+          // 旧画面との互換用(以前から返していた項目)
+          canWin: analysis.win.possible,
+          isTenpai: analysis.tenpai.possible,
+          canRiichi: analysis.riichi.possible,
+          waits: analysis.tenpai.waits,
+          riichiDiscards: analysis.riichi.discards,
+          decompositions: analysis.win.decompositions.map((d) => ({
+            words: d.words.map((w) => w.word),
+          })),
 
-          isTenpai:
-            hand.length === 13 &&
-            waits.length > 0,
-
-          canRiichi:
-            hand.length === 14 &&
-            canDeclareRiichiHand(hand, dict),
-
-          decompositions: decompositions14,
-          waits,
-          riichiDiscards,
+          // 新しい分析結果(和了・テンパイ・リーチ・役の内訳)
+          analysis,
 
           // デバッグ用に実際にDBから読んだ辞書も返す
           dictionary: dict,

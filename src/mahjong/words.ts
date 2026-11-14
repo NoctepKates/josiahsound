@@ -434,6 +434,77 @@ export function findCallCandidates(
 }
 
 /**
+ * 手牌13枚の「待ち牌」(引けば和了になる牌種)を全て求める。
+ *
+ * テンパイ判定・リーチ判定・デバッグ画面の分析は、すべてこの関数を土台にする。
+ * 判定の食い違い(画面ごとに別実装で結果が違う)を防ぐため、
+ * 「待ち牌が1つ以上ある = テンパイ」という定義を1か所にまとめている。
+ *
+ * memo は、同じ辞書・同じ残り文字構成で再利用できる探索結果。
+ * 複数の手牌をまとめて調べるときは同じ Map を渡すと速い。
+ */
+export function findWaits(
+  hand13: string[],
+  dict: WordDef[],
+  memo: Map<string, boolean> = new Map(),
+): string[] {
+  if (hand13.length !== 13) return [];
+  if (dict.length === 0) return [];
+
+  const prepared = prepareDict(dict);
+  const waits: string[] = [];
+
+  for (const kind of ALL_TILE_KINDS) {
+    if (canDecomposePrepared([...hand13, kind], prepared, memo)) {
+      waits.push(kind);
+    }
+  }
+
+  return waits;
+}
+
+/**
+ * 手牌14枚(打牌前)について、
+ * 「その牌を1枚切るとテンパイになる」打牌と、そのときの待ち牌を全て返す。
+ *
+ * - 和了形(14枚で和了している)の手でも、切って待ちが残るなら含まれる
+ *   (例: 和了形から最後の1枚を切れば、その牌待ちのテンパイ)。
+ * - リーチ可能 = この結果が1件以上あること。
+ */
+export interface DiscardWaits {
+  discard: string;
+  waits: string[];
+}
+
+export function findRiichiDiscards(
+  hand14: string[],
+  dict: WordDef[],
+): DiscardWaits[] {
+  if (hand14.length !== 14) return [];
+  if (dict.length === 0) return [];
+
+  const memo = new Map<string, boolean>();
+  const result: DiscardWaits[] = [];
+  const tried = new Set<string>();
+
+  for (const kind of hand14) {
+    if (tried.has(kind)) continue;
+    tried.add(kind);
+
+    const rest = [...hand14];
+    rest.splice(rest.indexOf(kind), 1);
+
+    const waits = findWaits(rest, dict, memo);
+
+    if (waits.length > 0) {
+      result.push({ discard: kind, waits });
+    }
+  }
+
+  return result;
+}
+
+/**
  * 手牌13枚がテンパイかどうかを判定する。
  *
  * 重要:
@@ -453,32 +524,7 @@ export function isTenpai(
   hand13: string[],
   dict: WordDef[],
 ): boolean {
-  if (hand13.length !== 13) {
-    return false;
-  }
-
-  if (dict.length === 0) {
-    return false;
-  }
-
-  const prepared = prepareDict(dict);
-  const memo = new Map<string, boolean>();
-
-  for (const kind of ALL_TILE_KINDS) {
-    const hand14 = [...hand13, kind];
-
-    if (
-      canDecomposePrepared(
-        hand14,
-        prepared,
-        memo,
-      )
-    ) {
-      return true;
-    }
-  }
-
-  return false;
+  return findWaits(hand13, dict).length > 0;
 }
 
 /**
@@ -491,56 +537,5 @@ export function canDeclareRiichiHand(
   hand14: string[],
   dict: WordDef[],
 ): boolean {
-  if (hand14.length !== 14) {
-    return false;
-  }
-
-  if (dict.length === 0) {
-    return false;
-  }
-
-  const prepared = prepareDict(dict);
-
-  // 手牌14枚 → 1枚捨てる → 13枚
-  // その13枚についての和了判定結果を全部共有。
-  const memo = new Map<string, boolean>();
-
-  const triedKinds = new Set<string>();
-
-  for (const kind of hand14) {
-    if (triedKinds.has(kind)) {
-      continue;
-    }
-
-    triedKinds.add(kind);
-
-    const rest = [...hand14];
-    const index = rest.indexOf(kind);
-
-    if (index < 0) {
-      continue;
-    }
-
-    rest.splice(index, 1);
-
-    // 「残り13枚 + 引く牌」で和了できる牌が1つでもあればテンパイ。
-    for (const drawKind of ALL_TILE_KINDS) {
-      const candidate = [
-        ...rest,
-        drawKind,
-      ];
-
-      if (
-        canDecomposePrepared(
-          candidate,
-          prepared,
-          memo,
-        )
-      ) {
-        return true;
-      }
-    }
-  }
-
-  return false;
+  return findRiichiDiscards(hand14, dict).length > 0;
 }

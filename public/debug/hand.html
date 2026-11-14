@@ -224,6 +224,89 @@
         min-height: 46px;
       }
     }
+
+    /* 役の分析 */
+    .opts {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 14px;
+      align-items: center;
+    }
+
+    .opts label {
+      display: inline-flex;
+      gap: 6px;
+      align-items: center;
+      color: #ccc;
+    }
+
+    .opts input[type="number"],
+    .opts select {
+      background: #111;
+      color: #eee;
+      border: 1px solid #444;
+      border-radius: 6px;
+      padding: 4px 6px;
+    }
+
+    .opts input[type="number"] {
+      width: 64px;
+    }
+
+    .decomp {
+      border: 1px solid #333;
+      border-radius: 10px;
+      padding: 10px;
+      margin-bottom: 10px;
+      background: #151515;
+    }
+
+    .decomp.best {
+      border-color: #3a7;
+    }
+
+    .wordChip {
+      display: inline-block;
+      background: #222;
+      border: 1px solid #444;
+      border-radius: 8px;
+      padding: 3px 8px;
+      margin: 2px 4px 2px 0;
+    }
+
+    .wordChip small {
+      color: #aaa;
+      margin-left: 6px;
+    }
+
+    .scoreLine {
+      margin-top: 6px;
+      color: #ccc;
+      font-size: 14px;
+    }
+
+    .waitChip {
+      display: inline-block;
+      background: #1d2b22;
+      border: 1px solid #3a7;
+      border-radius: 8px;
+      padding: 3px 10px;
+      margin: 2px 4px 2px 0;
+      font-size: 18px;
+    }
+
+    table.mini {
+      border-collapse: collapse;
+      width: 100%;
+    }
+
+    table.mini th,
+    table.mini td {
+      border-bottom: 1px solid #2a2a2a;
+      padding: 5px 8px;
+      text-align: left;
+      vertical-align: top;
+    }
   </style>
 </head>
 
@@ -259,6 +342,27 @@
         下の手牌をクリックするとその1枚を削除。
       </span>
 
+    </div>
+  </section>
+
+  <section class="panel">
+    <h2>役の分析の条件</h2>
+
+    <div class="opts">
+      <label><input type="checkbox" id="optRiichi">リーチ</label>
+      <label><input type="checkbox" id="optIppatsu">一発</label>
+      <label><input type="checkbox" id="optDealer">親</label>
+      <label>
+        和了方法
+        <select id="optWinType">
+          <option value="tsumo">ツモ</option>
+          <option value="ron">ロン</option>
+        </select>
+      </label>
+      <label>
+        ドラ枚数
+        <input type="number" id="optDora" min="0" max="14" value="0">
+      </label>
     </div>
   </section>
 
@@ -318,7 +422,7 @@
   </section>
 
   <section class="panel">
-    <h2>待ち牌 / リーチ打牌候補</h2>
+    <h2>待ち牌 / 切ればテンパイになる打牌</h2>
 
     <div id="waits" class="mono empty">
       -
@@ -326,7 +430,7 @@
   </section>
 
   <section class="panel">
-    <h2>和了分解</h2>
+    <h2>和了分解と役の分析</h2>
 
     <div id="decompositions" class="mono empty">
       -
@@ -576,6 +680,142 @@ function scheduleCheck() {
   );
 }
 
+function readOptions() {
+  return {
+    riichi: $('optRiichi').checked,
+    ippatsu: $('optIppatsu').checked,
+    isDealer: $('optDealer').checked,
+    winType: $('optWinType').value,
+    doraCount: Number($('optDora').value) || 0
+  };
+}
+
+function yn(value, okText = '○', ngText = '×') {
+  return value ? okText : ngText;
+}
+
+function hanText(h) {
+  return h === 'y' ? '役満' : `${h}飜`;
+}
+
+function wordChips(words) {
+  return words.map((w) =>
+    `<span class="wordChip">${escapeHtml(w.word)}<small>${
+      w.inDict ? hanText(w.han) : '辞書なし'
+    }${
+      w.tags.length
+        ? ' / ' + escapeHtml(w.tags.join(' '))
+        : ''
+    }</small></span>`
+  ).join('');
+}
+
+// 1つの和了分解(単語・役の内訳・符/飜/点数)を表示する
+function decompHtml(d, isBest) {
+  const sc = d.score;
+
+  const breakdown = sc.baseHanBreakdown
+    .map((b) => `${escapeHtml(b.label)} ${hanText(b.han)}`)
+    .join('　＋　');
+
+  const pay = sc.payments;
+  const payText =
+    pay.fromDealer !== undefined || pay.fromNonDealer !== undefined
+      ? `ツモ: 親 ${pay.fromDealer ?? '-'} / 子 ${pay.fromNonDealer ?? '-'}（合計 ${pay.total}点）`
+      : `ロン: ${pay.total}点`;
+
+  return `
+    <div class="decomp ${isBest ? 'best' : ''}">
+      ${isBest ? '<div class="ok">★ 最も高い点数の分解</div>' : ''}
+      <div>${wordChips(d.words)}</div>
+      <div class="scoreLine">役: ${breakdown || '（なし）'}</div>
+      <div class="scoreLine">
+        ${sc.fu}符 ${sc.han}飜${
+          sc.limitName ? ' ／ <b>' + escapeHtml(sc.limitName) + '</b>' : ''
+        }${sc.isChiitoi ? ' ／ 七対子形' : ''}　→　${payText}
+      </div>
+    </div>`;
+}
+
+function winHtml(win) {
+  if (!win.possible) {
+    return '<span class="ng">分解できません（和了形ではありません）</span>';
+  }
+
+  return win.decompositions
+    .map((d, i) => decompHtml(d, i === win.bestIndex))
+    .join('');
+}
+
+// サーバーの分析結果(analysis)を画面に出す。13枚・14枚で同じ項目を同じ定義で表示する。
+function renderAnalysis(a) {
+  const is13 = a.length === 13;
+  const is14 = a.length === 14;
+
+  // 和了: 14枚の時だけ判定できる
+  setResult(
+    $('winResult'),
+    is14 ? yn(a.win.possible) : '-（14枚で判定）',
+    is14 ? (a.win.possible ? 'ok' : 'ng') : ''
+  );
+
+  // テンパイ:
+  //  13枚 = 待ちがある / 14枚 = 切ればテンパイになる打牌がある(和了形も含む)
+  setResult(
+    $('tenpaiResult'),
+    yn(a.tenpai.possible),
+    a.tenpai.possible ? 'ok' : 'ng'
+  );
+
+  // リーチ可能: 13枚 = テンパイしている / 14枚 = 切ればテンパイになる打牌がある
+  setResult(
+    $('riichiResult'),
+    yn(a.riichi.possible),
+    a.riichi.possible ? 'ok' : 'ng'
+  );
+
+  // 待ち牌 / 打牌候補
+  if (is13) {
+    $('waits').className = 'mono ' + (a.tenpai.waits.length ? 'ok' : 'ng');
+
+    $('waits').innerHTML = a.tenpai.waits.length
+      ? '待ち牌: ' +
+        a.tenpai.waits.map((k) => `<span class="waitChip">${escapeHtml(k)}</span>`).join('')
+      : '待ちなし（テンパイしていません）';
+  } else if (is14) {
+    $('waits').className = 'mono ' + (a.discards.length ? 'ok' : 'ng');
+
+    $('waits').innerHTML = a.discards.length
+      ? `<table class="mini">
+           <thead><tr><th>切る牌</th><th>切った後の待ち牌</th></tr></thead>
+           <tbody>${
+             a.discards.map((d) =>
+               `<tr><td>${escapeHtml(d.discard)}</td><td>${
+                 d.waits.map((k) => `<span class="waitChip">${escapeHtml(k)}</span>`).join('')
+               }</td></tr>`
+             ).join('')
+           }</tbody>
+         </table>`
+      : '切ればテンパイになる打牌がありません';
+  }
+
+  // 和了分解と役の分析
+  if (is14) {
+    $('decompositions').className = 'mono';
+    $('decompositions').innerHTML = winHtml(a.win);
+  } else if (is13) {
+    $('decompositions').className = 'mono';
+
+    $('decompositions').innerHTML = a.tenpai.waitDetails.length
+      ? a.tenpai.waitDetails.map((w) => `
+          <div style="margin-bottom:14px">
+            <div><span class="waitChip">${escapeHtml(w.kind)}</span> で和了したとき</div>
+            ${winHtml(w.win)}
+          </div>`).join('')
+      : '<span class="ng">待ちがないため、役の分析はありません</span>';
+  }
+}
+
 async function check() {
 
   resetResults();
@@ -586,7 +826,7 @@ async function check() {
   ) {
 
     $('status').textContent =
-      '13枚ならテンパイ判定、14枚なら和了・リーチ判定を行います。';
+      '13枚または14枚にすると、和了・テンパイ・リーチ可能・役の分析を行います。';
 
     $('status').className =
       'info';
@@ -612,7 +852,8 @@ async function check() {
             'application/json'
         },
         body: JSON.stringify({
-          hand
+          hand,
+          options: readOptions()
         }),
       }
     );
@@ -656,105 +897,7 @@ async function check() {
         : 'warn'
     );
 
-    if (hand.length === 13) {
-
-      setResult(
-        $('winResult'),
-        '-'
-      );
-
-      setResult(
-        $('tenpaiResult'),
-        data.isTenpai
-          ? '○'
-          : '×',
-        data.isTenpai
-          ? 'ok'
-          : 'ng'
-      );
-
-      setResult(
-        $('riichiResult'),
-        '-'
-      );
-
-      $('waits').textContent =
-        data.waits.length
-          ? data.waits.join('　')
-          : '待ちなし';
-
-      $('waits').className =
-        'mono ' +
-        (
-          data.waits.length
-            ? 'ok'
-            : 'ng'
-        );
-
-      $('decompositions').textContent =
-        '-';
-
-    } else {
-
-      setResult(
-        $('winResult'),
-        data.canWin
-          ? '○'
-          : '×',
-        data.canWin
-          ? 'ok'
-          : 'ng'
-      );
-
-      setResult(
-        $('tenpaiResult'),
-        '-'
-      );
-
-      setResult(
-        $('riichiResult'),
-        data.canRiichi
-          ? '○'
-          : '×',
-        data.canRiichi
-          ? 'ok'
-          : 'ng'
-      );
-
-      $('waits').textContent =
-        data.riichiDiscards.length
-          ? `リーチ打牌候補: ${data.riichiDiscards.join('　')}`
-          : 'リーチ可能な打牌なし';
-
-      $('waits').className =
-        'mono ' +
-        (
-          data.riichiDiscards.length
-            ? 'ok'
-            : 'ng'
-        );
-
-      if (data.decompositions.length) {
-
-        $('decompositions').innerHTML =
-          data.decompositions
-            .map((d, i) =>
-              `${i + 1}. ${d.words.join(' ｜ ')}`
-            )
-            .join('<br>');
-
-        $('decompositions').className =
-          'mono';
-
-      } else {
-
-        $('decompositions').textContent =
-          '分解できません';
-
-        $('decompositions').className =
-          'mono ng';
-      }
-    }
+    renderAnalysis(data.analysis);
 
     $('dictionarySummary').textContent =
       `DBから ${data.dictionaryCount} 語を読み込みました。`;
@@ -873,6 +1016,12 @@ $('random14Btn')
     'click',
     () => randomHand(14)
   );
+
+['optRiichi', 'optIppatsu', 'optDealer', 'optWinType', 'optDora']
+  .forEach((id) => {
+    $(id).addEventListener('change', scheduleCheck);
+    $(id).addEventListener('input', scheduleCheck);
+  });
 
 renderHand();
 renderTiles();

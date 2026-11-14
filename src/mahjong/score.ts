@@ -17,7 +17,7 @@ export interface ScoreResult {
   isChiitoi: boolean;
   fu: number;
   han: number;
-  baseHanBreakdown: { label: string; han: number }[];
+  baseHanBreakdown: { label: string; han: number | 'y' }[]; // 役満は 'y'
   basePoints: number;      // 符×2^(2+飜)
   limitName: string | null; // 満貫/跳満/倍満/三倍満/役満
   payments: {

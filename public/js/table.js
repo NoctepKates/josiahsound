@@ -85,6 +85,9 @@ function connect() {
     } else if (msg.type === 'canTsumo') {
       canTsumoNow = msg.possible;
       renderActionBar();
+    } else if (msg.type === 'notice') {
+      // サーバーからの通知(リーチできない打牌を選んだ場合など)
+      alert(msg.message);
     } else if (msg.type === 'result') {
       showResult(msg);
     } else if (msg.type === 'matchEnd') {
@@ -762,6 +765,22 @@ function doDiscard() {
   if (!selectedTileId) return;
   if (!state) return;
 
+  // リーチ宣言中は、切ればテンパイになる牌だけ切れる(サーバーが送る riichiDiscards)
+  if (riichiMode) {
+    const picked = handOrder.find((t) => t.id === selectedTileId);
+    const allowed = state.riichiDiscards || [];
+
+    if (picked && !allowed.includes(picked.kind)) {
+      alert(
+        'その牌を切ってもテンパイにならないため、リーチできません。\n' +
+        (allowed.length
+          ? `リーチできる打牌: ${allowed.join('　')}`
+          : '')
+      );
+      return;
+    }
+  }
+
   ws.send(
     JSON.stringify({
       type: 'discard',
@@ -778,6 +797,22 @@ function doDiscard() {
 function doDiscard() {
   if (!selectedTileId) return;
   if (!state) return;
+
+  // リーチ宣言中は、切ればテンパイになる牌だけ切れる(サーバーが送る riichiDiscards)
+  if (riichiMode) {
+    const picked = handOrder.find((t) => t.id === selectedTileId);
+    const allowed = state.riichiDiscards || [];
+
+    if (picked && !allowed.includes(picked.kind)) {
+      alert(
+        'その牌を切ってもテンパイにならないため、リーチできません。\n' +
+        (allowed.length
+          ? `リーチできる打牌: ${allowed.join('　')}`
+          : '')
+      );
+      return;
+    }
+  }
 
   ws.send(
     JSON.stringify({

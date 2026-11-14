@@ -1,5 +1,5 @@
 import { Tile, buildWall, rollDice2, nextForDora } from './mahjong/tiles';
-import { WordDef, canWin, findAllDecompositions, findCallCandidates, CallCandidate, canDeclareRiichiHand } from './mahjong/words';
+import { WordDef, canWin, findAllDecompositions, findCallCandidates, CallCandidate, findRiichiDiscards } from './mahjong/words';
 import { computeScore } from './mahjong/score';
 
 export interface RoomRules {
@@ -84,6 +84,7 @@ export class GameRoom {
   turnDrawnTile: Tile | null = null;
   pending: Pending = null;
   wordDict: WordDef[] = [];
+  dictLoadedAt = 0; // 辞書を最後にD1から読んだ時刻(ms)
   initialized = false;
 
   constructor(state: DurableObjectState, env: any) {
@@ -122,14 +123,33 @@ export class GameRoom {
   }
 
   async ensureLoaded() {
-    if (this.initialized) return;
-    const saved = await this.state.storage.get<any>('room');
-    if (saved) {
-      Object.assign(this, saved);
-      this.initialized = true;
+    if (!this.initialized) {
+      const saved = await this.state.storage.get<any>('room');
+      if (saved) {
+        Object.assign(this, saved);
+        this.initialized = true;
+      }
+    }
+
+    // 辞書は「部屋が最初に読み込まれた時の1回だけ」読むと、
+    //  ・最初の読み込みに失敗して空のまま
+    //  ・その後D1の単語を追加/変更しても反映されない
+    // となり、デバッグ画面(毎回D1を読む)では和了なのに実戦ではツモ/リーチが出ない、
+    // という食い違いの原因になる。空なら必ず読み直し、それ以外も一定間隔で更新する。
+    await this.refreshDict(this.wordDict.length === 0);
+  }
+
+  // 辞書をD1から読み直す。force でなければ10秒以内の再読み込みは省略する。
+  // 読み込みに失敗した場合(空配列)は、今ある辞書を捨てずに残す。
+  async refreshDict(force = false) {
+    if (!force && this.wordDict.length > 0 && Date.now() - this.dictLoadedAt < 10_000) {
+      return;
     }
     const dict = await this.loadDict();
-    this.wordDict = dict;
+    if (dict.length > 0) {
+      this.wordDict = dict;
+      this.dictLoadedAt = Date.now();
+    }
   }
 
   async loadDict(): Promise<WordDef[]> {
@@ -291,18 +311,31 @@ export class GameRoom {
     };
   }
 
-  // リーチ宣言が可能かどうか(門前・未リーチ・持ち点1000以上・残り牌4枚以上・
-  // かつ実際にどれか1枚切ればテンパイになる)を判定する。
+  // リーチ宣言の条件(門前・未リーチ・持ち点1000以上・残り牌4枚以上)を満たしたうえで、
+  // 「その牌を切るとテンパイになる」打牌の牌種を返す。空ならリーチできない。
+  // テンパイの定義はデバッグ画面(/debug/hand)と共通(mahjong/words.ts の findRiichiDiscards)。
+  computeRiichiDiscards(seat: number): string[] {
+    const p = this.players[seat];
+    if (!p) return [];
+    if (p.riichi) return [];
+    if (p.melds.length > 0) return [];
+    if (p.score < 1000) return [];
+    if (this.wall.length < 4) return [];
+    const hand14 = p.hand.map((t) => t.kind);
+    if (hand14.length !== 14) return [];
+    return findRiichiDiscards(hand14, this.wordDict).map((d) => d.discard);
+  }
+
   computeCanRiichi(seat: number): boolean {
+    return this.computeRiichiDiscards(seat).length > 0;
+  }
+
+  // ツモ和了できるか(鳴いて晒した分も含めて14文字が単語だけで分解できるか)
+  computeCanTsumo(seat: number): boolean {
     const p = this.players[seat];
     if (!p) return false;
-    if (p.riichi) return false;
-    if (p.melds.length > 0) return false;
-    if (p.score < 1000) return false;
-    if (this.wall.length < 4) return false;
-    const hand14 = p.hand.map((t) => t.kind);
-    if (hand14.length !== 14) return false;
-    return canDeclareRiichiHand(hand14, this.wordDict);
+    const chars = this.handCharsForWinCheck(p);
+    return chars.length === 14 && canWin(chars, this.wordDict);
   }
 
   broadcastState() {
@@ -337,6 +370,7 @@ export class GameRoom {
         : seats[0];
       const me = this.players[viewSeat];
       const isMyTurnNow = this.phase === 'playing' && this.currentTurnSeat === viewSeat;
+      const riichiDiscards = isMyTurnNow ? this.computeRiichiDiscards(viewSeat) : [];
       ws.send(JSON.stringify({
         ...base,
         yourSeat: viewSeat,
@@ -374,14 +408,10 @@ export class GameRoom {
               }
             : null,
         // 実際にテンパイになる場合のみtrue(サーバー側で判定した正式な値)
-        canRiichi: isMyTurnNow ? this.computeCanRiichi(viewSeat) : false,
-        canTsumo:
-          isMyTurnNow &&
-          this.handCharsForWinCheck(me).length === 14 &&
-          canWin(
-            this.handCharsForWinCheck(me),
-            this.wordDict
-          ),
+        canRiichi: riichiDiscards.length > 0,
+        // リーチ宣言のときに切れる牌種(これ以外を切るとテンパイにならない)
+        riichiDiscards,
+        canTsumo: isMyTurnNow && this.computeCanTsumo(viewSeat),
       }));
     }
     for (const ws of this.spectatorSockets) {
@@ -432,6 +462,10 @@ export class GameRoom {
 
   startHand(isFirstOfMatch: boolean) {
     this.phase = 'dealing';
+
+    // 局の開始ごとに辞書を読み直す(D1の単語の追加・変更を実戦に反映する)。
+    // 配牌をブロックしないよう待たずに実行し、失敗しても今の辞書を使い続ける。
+    void this.refreshDict(true).catch(() => {});
     if (isFirstOfMatch) {
       // サイコロ2つを裏で2回振って親決め
       const r1 = rollDice2();
@@ -504,9 +538,7 @@ export class GameRoom {
   }
 
   checkOwnTsumoPossible(seat: number) {
-    const p = this.players[seat];
-    const allChars = [...p.hand.map((t) => t.kind), ...p.melds.flatMap((m) => m.tiles.map((t) => t.kind))];
-    if (allChars.length === 14 && canWin(this.handCharsForWinCheck(p), this.wordDict)) {
+    if (this.computeCanTsumo(seat)) {
       this.send(seat, { type: 'canTsumo', possible: true, seat });
     }
   }
@@ -525,7 +557,18 @@ export class GameRoom {
     let idx = p.hand.findIndex((t) => t.id === tileId);
     if (idx === -1) idx = p.hand.findIndex((t) => t.kind === tileId);
     if (idx === -1) return;
-    if (riichiDeclare) p.riichi = true;
+    if (riichiDeclare) {
+      // リーチ宣言できるのは、切ればテンパイになる牌だけ。
+      // (以前は判定せずに宣言できてしまっていた)
+      if (!this.computeRiichiDiscards(seat).includes(p.hand[idx].kind)) {
+        this.send(seat, {
+          type: 'notice',
+          message: 'その牌を切ってもテンパイにならないため、リーチできません。',
+        });
+        return;
+      }
+      p.riichi = true;
+    }
     const [tile] = p.hand.splice(idx, 1);
     p.discards.push(tile);
     this.turnDrawnTile = null;

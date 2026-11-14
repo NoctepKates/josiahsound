@@ -98,35 +98,28 @@ export const specialYakus: SpecialYaku[] = [
 
 
 export function findSpecialYakus(words: WordDef[]): SpecialYaku[] {
-  const result = specialYakus.filter((yaku) => yaku.check(words));
+  // 成立した役を1回ずつ数える。
+  // (以前は filter の結果にさらに同じ役を push していたため、全ての役が二重に加算されていた)
+  const matched = specialYakus.filter((yaku) => yaku.check(words));
+  const names = new Set(matched.map((y) => y.name));
 
-  for (const yaku of specialYakus) {
-    if (yaku.check(words)) {
-      result.push(yaku);
-    }
-  }
+  const CHAPTER_NAMES = [
+    '第一章 極道脅迫！体育部員たちの逆襲',
+    '第二章 モデル反撃！犯されるスカウトマン',
+    '第三章 盗撮！そしてSM妄想へ…',
+    '第四章 昏睡レイプ！野獣と化した先輩',
+  ];
+  const IMP = 'これは、夢なのか、現実なのか…。';
 
+  // 上位役が成立した場合、下位役を消す。
+  //   章の役 > 「これは、夢なのか、現実なのか…。」 > 淫一色
+  // (以前は最初に当てはまった条件で return していたため、
+  //  「IMP と 章」が同時に成立すると IMP が消えずに残っていた)
+  const hasChapter = CHAPTER_NAMES.some((n) => names.has(n));
 
-  // 上位役が成立した場合、下位役を消す
-  if (result.some(y => y.name === 'これは、夢なのか、現実なのか…。')) {
-    return result.filter(y => y.name !== '淫一色');
-  }
-
-  if (result.some(y => y.name === '第一章 極道脅迫！体育部員たちの逆襲')) {
-    return result.filter(y => y.name !== 'これは、夢なのか、現実なのか…。');
-  }
-
-  if (result.some(y => y.name === '第二章 モデル反撃！犯されるスカウトマン')) {
-    return result.filter(y => y.name !== 'これは、夢なのか、現実なのか…。');
-  }
-
-  if (result.some(y => y.name === '第三章 盗撮！そしてSM妄想へ…')) {
-    return result.filter(y => y.name !== 'これは、夢なのか、現実なのか…。');
-  }
-
-  if (result.some(y => y.name === '第四章 昏睡レイプ！野獣と化した先輩')) {
-    return result.filter(y => y.name !== 'これは、夢なのか、現実なのか…。');
-  }
-
-  return result;
+  return matched.filter((y) => {
+    if (y.name === IMP && hasChapter) return false;
+    if (y.name === '淫一色' && names.has(IMP)) return false;
+    return true;
+  });
 }
