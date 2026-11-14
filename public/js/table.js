@@ -410,14 +410,20 @@ function tileHtml(kind, selected, selectable, small, idx, isDrawn, tileId, wrapC
         <div class="tile-face tile-right"></div>
         <div class="tile-face tile-top"></div>
         <div class="tile-face tile-bottom"></div>
-        <div class="tile-face tile-c tile-c1"></div>
-        <div class="tile-face tile-c tile-c2"></div>
-        <div class="tile-face tile-c tile-c3"></div>
-        <div class="tile-face tile-c tile-c4"></div>
-        <div class="tile-face tile-c tile-c5"></div>
-        <div class="tile-face tile-c tile-c6"></div>
-        <div class="tile-face tile-c tile-c7"></div>
-        <div class="tile-face tile-c tile-c8"></div>
+        <div class="tile-face tile-s tile-sb" style="--i:1"></div>
+        <div class="tile-face tile-s tile-sb" style="--i:2"></div>
+        <div class="tile-face tile-s tile-sb" style="--i:3"></div>
+        <div class="tile-face tile-s tile-sb" style="--i:4"></div>
+        <div class="tile-face tile-s tile-sb" style="--i:5"></div>
+        <div class="tile-face tile-s tile-sb" style="--i:6"></div>
+        <div class="tile-face tile-s tile-sb" style="--i:7"></div>
+        <div class="tile-face tile-s tile-sf" style="--i:8"></div>
+        <div class="tile-face tile-s tile-sf" style="--i:9"></div>
+        <div class="tile-face tile-s tile-sf" style="--i:10"></div>
+        <div class="tile-face tile-s tile-sf" style="--i:11"></div>
+        <div class="tile-face tile-s tile-sf" style="--i:12"></div>
+        <div class="tile-face tile-s tile-sf" style="--i:13"></div>
+        <div class="tile-face tile-s tile-sf" style="--i:14"></div>
       </div>
     </div>
   `;

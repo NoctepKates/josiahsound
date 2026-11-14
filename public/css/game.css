@@ -413,7 +413,7 @@ body {
   box-sizing: border-box;
 
   /* 面の縁は黄ばませず、ごく薄い灰色の細線にする */
-  border: 1px solid #ffffff;
+  border: 1px solid #e2e2e2;
   border-radius: var(--tile-r);
 
   /* 面本体は真っ白(文字色はそのまま) */
@@ -1708,135 +1708,58 @@ body {
   transform: translateY(-11px) !important;
 }
 
-
 /* =========================================================
-   角の側面(丸みに沿って曲げる)
+   側面(表面・裏面と同じ角丸の板を奥行き方向に重ねて作る)
    ========================================================= */
 
 /*
- * 表面・裏面は角が丸いので、平らな側面4枚だけだと角に隙間ができる。
- * 角の1/4円を、細い平面2枚(45度ずつ)で折れ線近似してつなぐ。
- * 各パーツは「接線方向の幅 x 厚み」の板で、
- *   rotateX(90deg) で厚み方向を奥行き(z)に向け、
- *   rotateZ(接線の向き) で円弧の向きに合わせ、
- *   translate(dx, dy) で円弧の中点に置く。
- * 色は他の側面と同じく、奥側の半分が紺・表側の半分が白。
+ * 平らな側面4枚+角の折れ線では、角の丸みと側面の形がどうしても合わず
+ * 表面が側面からはみ出して見えた。
+ * そこで表面・裏面とまったく同じ形(同じ幅・高さ・角丸)の板を、
+ * 厚みの間に 14 枚、等間隔に重ねて側面にする。
+ * どの角度から見ても輪郭は表面と同じ角丸の長方形をなぞるので、はみ出しも隙間もできない。
+ * 奥側の半分(.tile-sb)は牌の裏の色、表側の半分(.tile-sf)は白。
  */
-.tile3d > .tile-c {
-  left: 50%;
-  top: 50%;
+.tile3d > .tile-left,
+.tile3d > .tile-right,
+.tile3d > .tile-bottom {
+  display: none;
+}
 
-  /* 円弧の弦の長さ(2 * r * sin(22.5度)) + 継ぎ目の隙間隠し */
-  width: calc(var(--tile-r) * 0.7654 + 0.6px);
-  height: calc(var(--tile-depth) + 1px);
+/* 上側の面は、自分の手牌(平面表示)の「上側の帯」でだけ使う */
+.tile3d > .tile-top {
+  display: none;
+}
 
-  border: 0;
+.tile3d > .tile-s {
+  left: 0;
+  top: 0;
+
+  width: var(--tile-w);
+  height: var(--river-tile-h);
+
   box-sizing: border-box;
+  border: 0;
+  border-radius: var(--tile-r);
 
-  background:
-    linear-gradient(
-      180deg,
-      var(--tile-side-green) 0%,
-      var(--tile-side-green) 50%,
-      var(--tile-side-white) 50%,
-      var(--tile-side-white) 100%
+  /* --i は 1..14 。厚みを 15 等分した位置に置く(両端は表面・裏面) */
+  transform:
+    translateZ(
+      calc(var(--tile-depth) * (var(--i) / 15 - 0.5))
     );
 
-  transform-origin: center center;
-
-  z-index: 3;
   pointer-events: none;
 }
 
-.tile3d > .tile-c1 {
-  transform:
-    translate(-50%, -50%)
-    translate(
-      calc(var(--tile-w) * -0.5 + var(--tile-r) * 0.1464),
-      calc(var(--river-tile-h) * -0.5 + var(--tile-r) * 0.6464)
-    )
-    rotateZ(292.5deg)
-    rotateX(90deg);
+.tile3d > .tile-sb {
+  background: var(--tile-side-green);
 }
 
-.tile3d > .tile-c2 {
-  transform:
-    translate(-50%, -50%)
-    translate(
-      calc(var(--tile-w) * -0.5 + var(--tile-r) * 0.6464),
-      calc(var(--river-tile-h) * -0.5 + var(--tile-r) * 0.1464)
-    )
-    rotateZ(337.5deg)
-    rotateX(90deg);
+.tile3d > .tile-sf {
+  background: var(--tile-side-white);
 }
 
-.tile3d > .tile-c3 {
-  transform:
-    translate(-50%, -50%)
-    translate(
-      calc(var(--tile-w) * 0.5 + var(--tile-r) * -0.6464),
-      calc(var(--river-tile-h) * -0.5 + var(--tile-r) * 0.1464)
-    )
-    rotateZ(382.5deg)
-    rotateX(90deg);
-}
-
-.tile3d > .tile-c4 {
-  transform:
-    translate(-50%, -50%)
-    translate(
-      calc(var(--tile-w) * 0.5 + var(--tile-r) * -0.1464),
-      calc(var(--river-tile-h) * -0.5 + var(--tile-r) * 0.6464)
-    )
-    rotateZ(427.5deg)
-    rotateX(90deg);
-}
-
-.tile3d > .tile-c5 {
-  transform:
-    translate(-50%, -50%)
-    translate(
-      calc(var(--tile-w) * 0.5 + var(--tile-r) * -0.1464),
-      calc(var(--river-tile-h) * 0.5 + var(--tile-r) * -0.6464)
-    )
-    rotateZ(112.5deg)
-    rotateX(90deg);
-}
-
-.tile3d > .tile-c6 {
-  transform:
-    translate(-50%, -50%)
-    translate(
-      calc(var(--tile-w) * 0.5 + var(--tile-r) * -0.6464),
-      calc(var(--river-tile-h) * 0.5 + var(--tile-r) * -0.1464)
-    )
-    rotateZ(157.5deg)
-    rotateX(90deg);
-}
-
-.tile3d > .tile-c7 {
-  transform:
-    translate(-50%, -50%)
-    translate(
-      calc(var(--tile-w) * -0.5 + var(--tile-r) * 0.6464),
-      calc(var(--river-tile-h) * 0.5 + var(--tile-r) * -0.1464)
-    )
-    rotateZ(202.5deg)
-    rotateX(90deg);
-}
-
-.tile3d > .tile-c8 {
-  transform:
-    translate(-50%, -50%)
-    translate(
-      calc(var(--tile-w) * -0.5 + var(--tile-r) * 0.1464),
-      calc(var(--river-tile-h) * 0.5 + var(--tile-r) * -0.6464)
-    )
-    rotateZ(247.5deg)
-    rotateX(90deg);
-}
-
-/* 自分の手牌は平面表示(上側の帯だけ)なので、角パーツは使わない */
-.self-hand-layer .seat.bottom .hand-row .tile3d > .tile-c {
+/* 自分の手牌は平面表示(上側の帯だけ)なので、重ね板は使わない */
+.self-hand-layer .seat.bottom .hand-row .tile3d > .tile-s {
   display: none !important;
 }
