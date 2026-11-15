@@ -692,6 +692,19 @@ body {
 .hand-row {
   display: flex;
 
+  /*
+   * 手牌は左揃え。
+   * 中央揃えだと、ツモ・打牌で枚数が変わるたびに全ての牌が半枚ぶん左右に動く。
+   * 14枚ぶん(+ツモ牌との間隔14px)の幅を常に確保して、左端を固定する。
+   */
+  justify-content: flex-start;
+  min-width:
+    calc(
+      14 * var(--tile-w) +
+      13 * var(--tile-gap) +
+      14px
+    );
+
   gap: var(--tile-gap);
 
   min-height: 58px;
@@ -1880,4 +1893,52 @@ body {
   font-size: 11px;
   color: #e8c15a;
   background: #1a2030;
+}
+
+
+/* =========================================================
+   自分の手牌の層: 操作できるようにする / リーチ・ツモのボタン
+   ========================================================= */
+
+/*
+ * 自分の手牌の層(.self-hand-layer)は pointer-events: none で卓の操作を邪魔しないが、
+ * そのままだと中の手牌・ボタンも none を引き継ぎ、クリックが全て卓(.table-wrap)に落ちる。
+ * 手牌・手牌行・ボタンだけ操作できるようにする。
+ */
+.self-hand-layer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.self-hand-layer .seat.bottom,
+.self-hand-layer .seat.bottom .hand-row,
+.self-hand-layer .seat.bottom .tile-wrap {
+  pointer-events: auto;
+}
+
+/*
+ * リーチ・ツモのボタン: 手牌の右上に出す。
+ *  ・align-self: flex-end で手牌の右端にそろえる
+ *  ・margin-bottom で、牌の上側の帯(12px)と選択で持ち上がる分(11px)より上に離す
+ *  ・position: relative + z-index で、手牌行(z-index: 41)より前に出して、
+ *    牌に隠れてクリックできなくなるのを防ぐ
+ */
+.self-hand-layer .action-bar {
+  position: relative;
+  z-index: 60;
+
+  align-self: flex-end;
+
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+
+  margin-bottom: 64px;
+
+  pointer-events: auto;
+}
+
+.self-hand-layer .action-bar:empty {
+  display: none;
 }
