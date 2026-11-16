@@ -25,6 +25,13 @@
   <div style="display:flex; gap:12px; justify-content:center;">
     <button class="btn" id="inviteBtn">フレンドを招待</button>
     <button class="btn hidden" id="addCpuBtn">CPUを追加</button>
+    <select id="cpuStrength" class="hidden" title="追加するCPUの強さ">
+      <option value="1">Lv1 よわい</option>
+      <option value="2">Lv2</option>
+      <option value="3" selected>Lv3 ふつう</option>
+      <option value="4">Lv4</option>
+      <option value="5">Lv5 つよい</option>
+    </select>
     <button class="btn primary" id="readyBtn">準備OK</button>
     <button class="btn primary hidden" id="devReadyAllBtn">🛠 全員準備OK(開発者)</button>
     <button class="btn danger" onclick="location.href='/xiama/home'">退出</button>

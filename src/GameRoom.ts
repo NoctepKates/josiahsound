@@ -1,6 +1,6 @@
 import { Tile, buildWall, rollDice2, nextForDora } from './mahjong/tiles';
 import { WordDef, canWin, findAllDecompositions, findCallCandidates, CallCandidate, findRiichiDiscards, findWaits } from './mahjong/words';
-import { chooseCpuCall, chooseCpuDiscard } from './mahjong/cpu';
+import { chooseCpuCall, chooseCpuDiscard, cpuStrengthConfig, normalizeCpuStrength } from './mahjong/cpu';
 import { computeScore } from './mahjong/score';
 
 export interface RoomRules {
@@ -32,6 +32,7 @@ interface Player {
   connected: boolean;
   isDev?: boolean; // 開発者モードで自動的に埋められた席かどうか
   isCpu?: boolean; // CPUの席かどうか(ソケットを持たず、サーバーが打牌・鳴きを決める)
+  cpuStrength?: number; // CPUの強さ(1〜5)。未設定の古い席は3として扱う
   avatarV?: number; // プロフィール画像の更新時刻(0/未設定なら画像なし)
 }
 
@@ -103,6 +104,8 @@ export class GameRoom {
   // 短い setTimeout で人間が見える間を置いて打たせる。世代番号で古いタイマーを無効化する。
   cpuTimer: ReturnType<typeof setTimeout> | null = null;
   cpuTimerGeneration = 0;
+  // CPUのランダム判定に使う乱数。テストで固定できるようフィールドにしている。
+  rng: () => number = Math.random;
 
   constructor(state: DurableObjectState, env: any) {
     this.state = state;
@@ -358,6 +361,7 @@ export class GameRoom {
       melds: p.melds.map((m) => ({ word: m.word, tiles: m.tiles.map((t) => t.kind) })),
       riichi: p.riichi, score: p.score, ready: p.ready, connected: p.connected,
       isCpu: !!p.isCpu,
+      cpuStrength: p.isCpu ? (p.cpuStrength ?? 3) : undefined,
       // プロフィール画像(設定していなければ null)。開発者モードの席(`ID#席番号`)も元のユーザーの画像を使う
       avatarUrl: p.avatarV
         ? `/api/avatar/${encodeURIComponent(p.userId.split('#')[0])}?v=${p.avatarV}`
@@ -499,7 +503,7 @@ export class GameRoom {
   onMessage(seat: number, msg: any) {
     switch (msg.type) {
       case 'addCpu':
-        this.addCpu(seat);
+        this.addCpu(seat, msg.strength);
         break;
       case 'removeCpu':
         this.removeCpu(seat, msg.targetSeat);
@@ -545,7 +549,7 @@ export class GameRoom {
 
   // CPUを1席追加する。ホストだけが、待機中に、空きがある場合に呼べる。
   // CPUは最初から準備OKなので、人数が揃い人間が全員準備OKになればすぐ対局が始まる。
-  addCpu(requesterSeat: number) {
+  addCpu(requesterSeat: number, strength?: unknown) {
     if (this.phase !== 'waiting') {
       this.send(requesterSeat, { type: 'notice', message: '対局開始後はCPUを追加できません。' });
       return;
@@ -567,6 +571,7 @@ export class GameRoom {
       hand: [], discards: [], melds: [],
       riichi: false, ippatsuActive: false, score: 25000, ready: true, connected: true,
       isCpu: true,
+      cpuStrength: normalizeCpuStrength(strength),
     });
     this.broadcastState();
     this.maybeStart();
@@ -616,7 +621,10 @@ export class GameRoom {
     const seat = this.currentTurnSeat;
     const p = this.players[seat];
     if (!p?.isCpu) return;
-    if (this.computeCanTsumo(seat)) {
+    const strength = p.cpuStrength ?? 3;
+    const cfg = cpuStrengthConfig(strength);
+    // 弱いCPUはツモを見逃すことがある。見逃した場合は普通に打牌する。
+    if (this.computeCanTsumo(seat) && this.rng() >= cfg.winMissChance) {
       this.handleTsumoWin(seat);
       return;
     }
@@ -631,6 +639,8 @@ export class GameRoom {
       drawnKind: this.turnDrawnTile?.kind ?? null,
       riichiDiscards: this.computeRiichiDiscards(seat),
       isRiichi: p.riichi,
+      strength,
+      rng: this.rng,
     });
     if (!decision.discardKind) return;
     // ツモ切り(切る牌がツモ牌と同じ牌種)の場合はツモ牌そのものを切る。
@@ -649,9 +659,12 @@ export class GameRoom {
     if (this.pending.kind === 'ron') {
       for (const seat of [...this.pending.eligibleSeats]) {
         if (!this.pending || this.pending.kind !== 'ron') break;
-        if (this.players[seat]?.isCpu) {
-          // ロンできる席だけが eligible に入っているので、CPUは必ずロンする。
-          this.handleRonDecision(seat, true);
+        const p = this.players[seat];
+        if (p?.isCpu) {
+          // ロンできる席だけが eligible に入っている。弱いCPUはたまに見逃す。
+          // (見逃すとフリテンになるので、handleRonDecision の判定はそのまま使う)
+          const cfg = cpuStrengthConfig(p.cpuStrength ?? 3);
+          this.handleRonDecision(seat, this.rng() >= cfg.winMissChance);
         }
       }
       return;
@@ -670,6 +683,8 @@ export class GameRoom {
         doraKinds: this.currentDora(),
         candidates,
         isRiichi: p.riichi,
+        strength: p.cpuStrength ?? 3,
+        rng: this.rng,
       });
       this.handleCallDecision(seat, decision.accept, decision.word);
     }

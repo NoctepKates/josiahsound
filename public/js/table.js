@@ -354,7 +354,7 @@ function render(s) {
         avatarHtml(p) +
         `<div class="player-name">` +
         `${isDealer ? '<span class="dealer-mark">親</span> ' : ''}` +
-        `${escapeHtmlText(p.username)}${p.isCpu ? ' (CPU)' : ''}${divKey === 'self' && s.yourFuriten ? ' <span style="color:#ff8f8f; font-size:12px;">フリテン</span>' : ''}${p.connected ? '' : ' (切断)'}` +
+        `${escapeHtmlText(p.username)}${p.isCpu ? ' (CPU Lv' + (p.cpuStrength ?? 3) + ')' : ''}${divKey === 'self' && s.yourFuriten ? ' <span style="color:#ff8f8f; font-size:12px;">フリテン</span>' : ''}${p.connected ? '' : ' (切断)'}` +
         `</div>`;
     }
 

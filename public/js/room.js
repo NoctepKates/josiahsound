@@ -58,7 +58,7 @@ function render(state) {
   const isHost = !!(me && me.userId === state.hostUserId);
   document.getElementById('playerList').innerHTML = state.players.map((p, idx) => `
     <div style="display:flex; justify-content:space-between; align-items:center; padding:8px 12px; background:var(--bg-panel-2); border-radius:8px;">
-      <span>${p.username} ${p.isCpu ? '<span style="color:var(--gold-bright); font-size:12px;">(CPU)</span>' : ''} ${isHostPlayer(p, state) ? '<span style="color:var(--gold-bright); font-size:12px;">(ホスト)</span>' : ''}</span>
+      <span>${p.username} ${p.isCpu ? '<span style="color:var(--gold-bright); font-size:12px;">(CPU Lv' + (p.cpuStrength ?? 3) + ')</span>' : ''} ${isHostPlayer(p, state) ? '<span style="color:var(--gold-bright); font-size:12px;">(ホスト)</span>' : ''}</span>
       <span style="display:flex; align-items:center; gap:8px;">
         <span style="color:${p.ready ? '#4caf50' : 'var(--text-sub)'};">${p.ready ? '準備OK' : '未準備'}</span>
         ${isHost && p.isCpu && idx === state.players.length - 1 ? `<button class="btn danger" onclick="removeCpu(${p.seat})">削除</button>` : ''}
@@ -70,6 +70,10 @@ function render(state) {
   const addCpuBtn = document.getElementById('addCpuBtn');
   addCpuBtn.classList.toggle('hidden', !isHost);
   addCpuBtn.disabled = state.players.length >= state.rules.playerCount;
+  // 強さの選択も、CPU追加ボタンと同じ条件で出す/隠す。
+  const cpuStrength = document.getElementById('cpuStrength');
+  cpuStrength.classList.toggle('hidden', !isHost);
+  cpuStrength.disabled = state.players.length >= state.rules.playerCount;
 
   const readyBtn = document.getElementById('readyBtn');
   const meInfo = state.players[state.yourSeat];
@@ -100,7 +104,7 @@ document.getElementById('devReadyAllBtn').onclick = () => {
 
 document.getElementById('addCpuBtn').onclick = () => {
   if (ws && ws.readyState === WebSocket.OPEN) {
-    ws.send(JSON.stringify({ type: 'addCpu' }));
+    ws.send(JSON.stringify({ type: 'addCpu', strength: Number(document.getElementById('cpuStrength').value) }));
   }
 };
 
