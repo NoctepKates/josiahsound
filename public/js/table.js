@@ -145,6 +145,119 @@ function reconcileHandOrder(newTiles) {
   handOrder = [...kept, ...remaining];
 }
 
+
+// ---------------------------------------------------------------
+// 局・供託・本場・プロフィール画像・リーチ棒アニメーション
+// ---------------------------------------------------------------
+
+// 「東1局」のように、場風 + その風の中での局数。
+// round は通算の局番号(1始まり)。1つの風は人数ぶんの局(4人なら東1〜東4)。
+function roundLabel(s) {
+  const n = Math.max(1, s.rules.playerCount);
+  const idx = Math.max(0, (s.round || 1) - 1);
+  const wind = WIND_KANJI[Math.floor(idx / n) % WIND_KANJI.length];
+  const inWind = (idx % n) + 1;
+
+  return `${wind}${inWind}局`;
+}
+
+// 左上のドラ表示の枠の下: [1000点棒] x 供託の本数 / [100点棒] x 本場数
+function renderStickCounts(s) {
+  const el = document.getElementById('stickCounts');
+  if (!el) return;
+
+  el.innerHTML = `
+    <span class="stick-count">
+      <span class="stick-1000 stick-icon"></span>
+      <span class="stick-x">x ${s.riichiSticks || 0}</span>
+    </span>
+    <span class="stick-count">
+      <span class="stick-100 stick-icon"></span>
+      <span class="stick-x">x ${s.honba || 0}</span>
+    </span>
+  `;
+}
+
+function escapeHtmlText(str) {
+  return String(str).replace(/[&<>"']/g, (c) => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
+  }[c]));
+}
+
+// プレイヤー名の上に出すプロフィール画像。未設定なら名前の1文字目の丸。
+function avatarHtml(p) {
+  if (p.avatarUrl) {
+    return `<img class="player-avatar" src="${escapeHtmlText(p.avatarUrl)}" alt="">`;
+  }
+
+  const initial = escapeHtmlText(Array.from(p.username || '?')[0] || '?');
+  return `<div class="player-avatar placeholder">${initial}</div>`;
+}
+
+// 席ごとの直前のリーチ状態(false→trueになった瞬間の検出用)と、飛んでいる間の印
+const prevRiichi = {};
+const riichiFlyingUntil = {};
+const RIICHI_FLY_MS = 750;
+
+const RIICHI_ORIENTATION = {
+  self: { angle: 0,   dir: [0, 1] },   // 下の席: 画面の下から
+  r1:   { angle: -90, dir: [1, 0] },   // 右の席: 画面の右から
+  r2:   { angle: 180, dir: [0, -1] },  // 上の席: 画面の上から
+  r3:   { angle: 90,  dir: [-1, 0] },  // 左の席: 画面の左から
+};
+
+// リーチ棒を画面外から飛ばして、そのプレイヤーのリーチ棒置き場に置く
+function flyRiichiStick(divKey) {
+  const slot = document.querySelector(`#compass-${divKey} .riichi-stick`);
+  if (!slot) return;
+
+  const { angle, dir } = RIICHI_ORIENTATION[divKey];
+
+  const r = slot.getBoundingClientRect();
+  const cx = r.left + r.width / 2;
+  const cy = r.top + r.height / 2;
+
+  const dist = Math.max(window.innerWidth, window.innerHeight) * 0.8 + 240;
+
+  const el = document.createElement('div');
+  el.className = 'stick-1000 riichi-fly';
+  el.style.left = `${cx - 32}px`;
+  el.style.top = `${cy - 5}px`;
+  document.body.appendChild(el);
+
+  const done = () => {
+    el.remove();
+    riichiFlyingUntil[divKey] = 0;
+
+    // 再描画で作り直されている場合もあるので、今あるものを探して置く
+    const now = document.querySelector(`#compass-${divKey} .riichi-stick`);
+    if (now) now.classList.add('active');
+  };
+
+  if (!el.animate) {
+    done();
+    return;
+  }
+
+  const anim = el.animate(
+    [
+      {
+        transform:
+          `translate(${dir[0] * dist}px, ${dir[1] * dist}px) rotate(${angle + 540}deg) scale(2)`,
+        opacity: 1,
+      },
+      {
+        transform: `translate(0px, 0px) rotate(${angle}deg) scale(1)`,
+        opacity: 1,
+      },
+    ],
+    { duration: RIICHI_FLY_MS, easing: 'cubic-bezier(.2,.8,.25,1)', fill: 'forwards' }
+  );
+
+  anim.onfinish = done;
+  anim.oncancel = done;
+}
+
 function render(s) {
   state = s;
   canTsumoNow = s.canTsumo === true;
@@ -152,15 +265,15 @@ function render(s) {
   const n = s.rules.playerCount;
   const my = s.yourSeat;
 
-  document.getElementById('roundInfo').textContent =
-    `第${s.round}局 (${s.honba}本場)`;
-
   renderDeadWall(s);
+  renderStickCounts(s);
 
   const wallDigits = document.getElementById('wallDigits');
 
   if (wallDigits) {
+    // 「東n局」(場風 + 局数)と、その下に残り牌数
     wallDigits.innerHTML =
+      `<div class="round-label">${roundLabel(s)}</div>` +
       sevenSegNumber(s.wallRemaining, 2);
   }
 
@@ -238,8 +351,11 @@ function render(s) {
         (p.riichi ? ' riichi' : '');
 
       tagEl.innerHTML =
+        avatarHtml(p) +
+        `<div class="player-name">` +
         `${isDealer ? '<span class="dealer-mark">親</span> ' : ''}` +
-        `${p.username}${p.connected ? '' : ' (切断)'}`;
+        `${escapeHtmlText(p.username)}${p.connected ? '' : ' (切断)'}` +
+        `</div>`;
     }
 
     if (compassEl) {
@@ -248,11 +364,35 @@ function render(s) {
         isDealer
       );
 
+      // リーチ宣言の瞬間(false→true)だけ、リーチ棒を画面外から飛ばす。
+      // 画面を開いた直後(前の状態が無い)に既にリーチしている人は、飛ばさずそのまま置く。
+      const justRiichi =
+        prevRiichi[seatNum] === false && p.riichi === true;
+
+      if (justRiichi) {
+        riichiFlyingUntil[divKey] = Date.now() + RIICHI_FLY_MS + 150;
+      }
+
+      prevRiichi[seatNum] = p.riichi;
+
+      const flying =
+        (riichiFlyingUntil[divKey] || 0) > Date.now();
+
+      // 各プレイヤーから見て、風は左端、点数は中央(やや中心寄り)、リーチ棒はその外側。
+      // 向きは .cell-* ごとに CSS で回転させる。
       compassEl.innerHTML = `
-        <div class="wind">${WIND_KANJI[windIdx]}</div>
-        <div class="score">${p.score}</div>
-        <div class="riichi-stick ${p.riichi ? 'active' : ''}"></div>
+        <div class="cc-inner">
+          <div class="wind">${WIND_KANJI[windIdx]}</div>
+          <div class="score">${p.score}</div>
+          <div class="riichi-slot">
+            <div class="riichi-stick stick-1000 ${p.riichi && !flying ? 'active' : ''}"></div>
+          </div>
+        </div>
       `;
+
+      if (justRiichi) {
+        requestAnimationFrame(() => flyRiichiStick(divKey));
+      }
     }
 
     const handEl =

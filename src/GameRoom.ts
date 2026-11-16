@@ -24,6 +24,7 @@ interface Player {
   ready: boolean;
   connected: boolean;
   isDev?: boolean; // 開発者モードで自動的に埋められた席かどうか
+  avatarV?: number; // プロフィール画像の更新時刻(0/未設定なら画像なし)
 }
 
 type Phase = 'waiting' | 'dealing' | 'playing' | 'finished';
@@ -66,6 +67,7 @@ export class GameRoom {
   players: Player[] = [];
   round = 1; // 東1局=1, 東2局=2 ...
   honba = 0;
+  riichiSticks = 0; // 供託のリーチ棒(1000点棒)の本数。和了した人が総取りし、流局では持ち越す
   dealerSeat = 0;
   wall: Tile[] = [];
   deadWall: Tile[] = [];
@@ -200,6 +202,7 @@ export class GameRoom {
       phase: this.phase,
       round: this.round,
       honba: this.honba,
+      riichiSticks: this.riichiSticks,
       dealerSeat: this.dealerSeat,
       players: this.players.map((p) => ({ ...p })),
     };
@@ -212,6 +215,32 @@ export class GameRoom {
     const u = this.players[seat]?.userId;
     if (!u) return false;
     return u === this.hostUserId || u.startsWith(this.hostUserId + '#');
+  }
+
+  // プロフィール画像の更新時刻(users.avatar_updated)をDBから読み、席に記録する。
+  // 画像そのものは /api/avatar/<userId>?v=<更新時刻> から配信するので、stateには載せない。
+  async loadAvatarFor(userId: string, seats: number[]) {
+    try {
+      const row = await this.env.DB
+        .prepare('SELECT avatar_updated AS v FROM users WHERE user_id = ?')
+        .bind(userId)
+        .first();
+
+      const v = Number((row as any)?.v) || 0;
+      let changed = false;
+
+      for (const seat of seats) {
+        const pl = this.players[seat];
+        if (pl && (pl.avatarV || 0) !== v) {
+          pl.avatarV = v;
+          changed = true;
+        }
+      }
+
+      if (changed) this.broadcastState();
+    } catch {
+      // 列がまだ無い(一度も画像が設定されていない)場合などは、画像なしのまま進める
+    }
   }
 
   handleSocket(ws: WebSocket, userId: string, username: string) {
@@ -247,6 +276,11 @@ export class GameRoom {
         });
         mySeats.push(seat);
       }
+    }
+
+    if (mySeats.length > 0) {
+      // プロフィール画像の有無を調べて、席に記録する(分かり次第、全員にstateを送り直す)
+      void this.loadAvatarFor(userId, mySeats);
     }
 
     if (mySeats.length === 0) {
@@ -308,6 +342,10 @@ export class GameRoom {
       handCount: p.hand.length, discards: p.discards.map((t) => t.kind),
       melds: p.melds.map((m) => ({ word: m.word, tiles: m.tiles.map((t) => t.kind) })),
       riichi: p.riichi, score: p.score, ready: p.ready, connected: p.connected,
+      // プロフィール画像(設定していなければ null)。開発者モードの席(`ID#席番号`)も元のユーザーの画像を使う
+      avatarUrl: p.avatarV
+        ? `/api/avatar/${encodeURIComponent(p.userId.split('#')[0])}?v=${p.avatarV}`
+        : null,
     };
   }
 
@@ -347,6 +385,7 @@ export class GameRoom {
       phase: this.phase,
       round: this.round,
       honba: this.honba,
+      riichiSticks: this.riichiSticks,
       dealerSeat: this.dealerSeat,
       currentTurnSeat: this.currentTurnSeat,
       doraIndicators: this.doraIndicators,
@@ -471,6 +510,7 @@ export class GameRoom {
       const r1 = rollDice2();
       const r2 = rollDice2();
       this.dealerSeat = (r1 + r2) % this.rules.playerCount;
+      this.riichiSticks = 0;
     }
 
     const n = this.rules.playerCount;
@@ -568,6 +608,10 @@ export class GameRoom {
         return;
       }
       p.riichi = true;
+
+      // リーチ棒(1000点)を供託に出す(持ち点が1000未満の人は computeRiichiDiscards で弾かれる)
+      p.score -= 1000;
+      this.riichiSticks += 1;
     }
     const [tile] = p.hand.splice(idx, 1);
     p.discards.push(tile);
@@ -861,6 +905,11 @@ export class GameRoom {
       p.score += score.payments.total;
     }
 
+    // 供託のリーチ棒は和了した人が総取りする
+    const riichiBonus = this.riichiSticks * 1000;
+    p.score += riichiBonus;
+    this.riichiSticks = 0;
+
     this.broadcastRaw({ type: 'result', kind: 'tsumo', winner: seat, decomp: best.decomp, score, uraDora: p.riichi ? this.uraDoraIndicators.map(nextForDora) : [] });
     this.endHandAndAdvance(isDealer);
   }
@@ -881,6 +930,13 @@ export class GameRoom {
       p.score += best.score.payments.total;
       results.push({ winner: seat, decomp: best.decomp, score: best.score, uraDora: p.riichi ? this.uraDoraIndicators.map(nextForDora) : [] });
     }
+    // 供託のリーチ棒は、和了した人(ダブロンなら放銃者に最も近い人=先頭)が総取りする
+    if (results.length > 0) {
+      const riichiBonus = this.riichiSticks * 1000;
+      this.players[results[0].winner].score += riichiBonus;
+      this.riichiSticks = 0;
+    }
+
     this.broadcastRaw({ type: 'result', kind: 'ron', discarder: discarderSeat, results });
     this.endHandAndAdvance(dealerWon);
   }

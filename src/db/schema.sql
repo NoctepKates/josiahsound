@@ -3,8 +3,11 @@ CREATE TABLE IF NOT EXISTS users (
   user_id     TEXT PRIMARY KEY,      -- 表示用ID (例: 8桁数字) ユーザーが検索に使う
   username    TEXT NOT NULL UNIQUE,
   password_hash TEXT NOT NULL,
-  created_at  INTEGER NOT NULL DEFAULT (unixepoch())
+  created_at  INTEGER NOT NULL DEFAULT (unixepoch()),
+  avatar      TEXT,                  -- プロフィール画像(data URL)。未設定ならNULL
+  avatar_updated INTEGER             -- 画像の更新時刻(unix秒)。配信URLの ?v= に使う
 );
+-- 既存のDBには、画像を初めて設定するときにサーバーが ALTER TABLE で上の2列を自動で追加する。
 
 -- セッション（簡易ログイン用トークン）
 CREATE TABLE IF NOT EXISTS sessions (

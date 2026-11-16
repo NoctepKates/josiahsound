@@ -216,23 +216,23 @@ body {
 }
 
 .cell-top {
-  grid-column: 2;
+  grid-column: 1 / 4;
   grid-row: 1;
 }
 
 .cell-right {
   grid-column: 3;
-  grid-row: 2;
+  grid-row: 1 / 4;
 }
 
 .cell-bottom {
-  grid-column: 2;
+  grid-column: 1 / 4;
   grid-row: 3;
 }
 
 .cell-left {
   grid-column: 1;
-  grid-row: 2;
+  grid-row: 1 / 4;
 }
 
 .compass-cell {
@@ -265,29 +265,6 @@ body {
   color: var(--red-accent);
 }
 
-.riichi-stick {
-  margin-top: 5px;
-
-  width: 28px;
-  height: 5px;
-
-  border-radius: 3px;
-
-  background: var(--red-accent);
-
-  box-shadow:
-    0 1px 0 rgba(0,0,0,.55),
-    0 0 7px rgba(192,67,63,.55);
-
-  opacity: 0;
-
-  transition: opacity .15s;
-}
-
-.riichi-stick.active {
-  opacity: 1;
-}
-
 #wallDigits {
   display: flex;
 
@@ -314,7 +291,10 @@ body {
   width: auto;
   height: 34px;
 
-  transform: none;
+  /* 残り枚数の数字は小さくする(上の「東n局」と同じくらいの大きさ) */
+  transform: scale(0.62);
+  transform-origin: center center;
+  margin: -6px 0;
 }
 
 #wallDigits .digit {
@@ -1941,4 +1921,257 @@ body {
 
 .self-hand-layer .action-bar:empty {
   display: none;
+}
+
+
+/* =========================================================
+   コンパス: 風・点数・リーチ棒(各プレイヤーの向きに合わせる)
+   ========================================================= */
+
+#wallDigits {
+  flex-direction: column;
+  gap: 2px;
+}
+
+/* 「東n局」。残り枚数の少し上に、数字と同じくらいの大きさで出す */
+#wallDigits .round-label {
+  font-size: 21px;
+  font-weight: 900;
+  line-height: 1;
+  letter-spacing: 1px;
+
+  color: var(--gold-bright);
+
+  text-shadow: 0 2px 3px rgba(0,0,0,.72);
+}
+
+/*
+ * 各プレイヤーの帯(.compass-cell)の中身。
+ * 中身は「そのプレイヤーから見て正しい向き」の横長の箱(幅=コンパスの一辺、高さ=帯の厚さ)で作り、
+ * 帯の中心を軸に回転させる。
+ *   自分 0度 / 左の席 時計回りに90度 / 向かいの席 180度 / 右の席 反時計回りに90度
+ * 箱の中では、風は左端、点数は中央(やや中心寄り)、リーチ棒はその外側に置く。
+ */
+.compass-cell:not(.cell-center) {
+  position: relative;
+  pointer-events: none;
+}
+
+.compass-cell .cc-inner {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+
+  width: var(--compass-size);
+  height: calc(var(--compass-size) / 3.6);
+
+  transform: translate(-50%, -50%) rotate(0deg);
+}
+
+.cell-bottom .cc-inner { transform: translate(-50%, -50%) rotate(0deg); }
+.cell-left   .cc-inner { transform: translate(-50%, -50%) rotate(90deg); }
+.cell-top    .cc-inner { transform: translate(-50%, -50%) rotate(180deg); }
+.cell-right  .cc-inner { transform: translate(-50%, -50%) rotate(-90deg); }
+
+/* 風: そのプレイヤーから見てコンパスの左端 */
+.cc-inner .wind {
+  position: absolute;
+  left: 14px;
+  top: 50%;
+
+  transform: translateY(-50%);
+
+  font-size: 22px;
+  font-weight: 900;
+  line-height: 1;
+}
+
+/* 点数: 帯の中央のまま、少し大きくして、コンパスの中心側(上)へ寄せる */
+.cc-inner .score {
+  position: absolute;
+  left: 50%;
+  top: 7px;
+
+  transform: translateX(-50%);
+
+  margin: 0;
+
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1.1;
+
+  color: #dfe5ee;
+}
+
+/* リーチ棒置き場: 点数のすぐ外側(プレイヤー寄り) */
+.cc-inner .riichi-slot {
+  position: absolute;
+  left: 50%;
+  bottom: 5px;
+
+  width: 66px;
+  height: 11px;
+
+  transform: translateX(-50%);
+}
+
+.riichi-stick {
+  opacity: 0;
+}
+
+.riichi-stick.active {
+  opacity: 1;
+}
+
+/* リーチ棒が画面外から飛んでくるときの本体(位置・回転は table.js が指定) */
+.riichi-fly {
+  position: fixed;
+  z-index: 200;
+
+  width: 64px !important;
+  height: 10px !important;
+
+  pointer-events: none;
+}
+
+/* =========================================================
+   点棒のアイコン(1000点棒 / 100点棒)
+   ========================================================= */
+
+.stick-1000,
+.stick-100 {
+  position: relative;
+  box-sizing: border-box;
+
+  display: inline-block;
+
+  width: 100%;
+  height: 100%;
+
+  border: 1px solid #b9b9b9;
+  border-radius: 6px;
+
+  background: linear-gradient(180deg, #ffffff 0%, #ececec 100%);
+
+  box-shadow:
+    0 1px 0 rgba(0,0,0,.45),
+    0 2px 4px rgba(0,0,0,.35);
+}
+
+/* 1000点棒: 中央に赤い丸 */
+.stick-1000::after {
+  content: "";
+
+  position: absolute;
+  left: 50%;
+  top: 50%;
+
+  /* 丸が楕円にならないよう、高さを基準にして幅は縦横比1:1で決める */
+  height: 64%;
+  width: auto;
+  aspect-ratio: 1 / 1;
+
+  transform: translate(-50%, -50%);
+
+  border-radius: 50%;
+  background: #c0433f;
+}
+
+/* 100点棒: 黒い点が4つ並ぶ */
+.stick-100 {
+  background:
+    radial-gradient(circle, #2b2b2b 0 38%, transparent 42%) 18% 50% / 14% 62% no-repeat,
+    radial-gradient(circle, #2b2b2b 0 38%, transparent 42%) 39% 50% / 14% 62% no-repeat,
+    radial-gradient(circle, #2b2b2b 0 38%, transparent 42%) 61% 50% / 14% 62% no-repeat,
+    radial-gradient(circle, #2b2b2b 0 38%, transparent 42%) 82% 50% / 14% 62% no-repeat,
+    linear-gradient(180deg, #ffffff 0%, #ececec 100%);
+}
+
+/* 左上のドラ表示の枠の下: [1000点棒] x 供託 / [100点棒] x 本場 */
+.dead-wall-bar {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.stick-counts {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+
+  color: var(--gold-bright);
+  font-size: 15px;
+  font-weight: 800;
+}
+
+.stick-count {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.stick-count .stick-icon {
+  width: 42px;
+  height: 8px;
+
+  flex: 0 0 auto;
+}
+
+.stick-count .stick-x {
+  min-width: 30px;
+}
+
+/* =========================================================
+   プレイヤー名の上のプロフィール画像
+   ========================================================= */
+
+.player-tag {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 3px;
+}
+
+/* 右側の隅のタグは、画像・名前とも右にそろえる */
+.player-tag.corner-r2,
+.player-tag.corner-r3 {
+  align-items: flex-end;
+}
+
+.player-avatar {
+  width: 30px;
+  height: 30px;
+
+  box-sizing: border-box;
+
+  border: 2px solid #d9b46a;
+  border-radius: 50%;
+
+  object-fit: cover;
+  background: #20283a;
+
+  box-shadow: 0 2px 5px rgba(0,0,0,.45);
+}
+
+.player-avatar.placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  font-size: 14px;
+  font-weight: 800;
+
+  color: #e8d9b0;
+}
+
+.player-tag .player-name {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* 画像が付いた分、隅のタグは高くなるので、鳴いた単語はその外側に置く */
+.meld-row {
+  right: 64px;
+  bottom: 64px;
 }

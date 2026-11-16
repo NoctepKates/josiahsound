@@ -4,6 +4,20 @@
 <meta charset="UTF-8" />
 <title>ホーム - 下麻</title>
 <link rel="stylesheet" href="/css/style.css" />
+<style>
+  /* プロフィール画像のプレビュー(丸) */
+  .avatar-preview {
+    width: 88px;
+    height: 88px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid #d9b46a;
+    background: #20283a;
+  }
+  .avatar-preview.placeholder {
+    visibility: visible;
+  }
+</style>
 </head>
 <body>
 
@@ -12,6 +26,7 @@
   <div style="display:flex; align-items:center; gap:18px;">
     <div class="online-badge"><span class="online-dot"></span><span id="onlineCount">-</span> 人が接続中</div>
     <button class="btn" id="profileBtn">プロフィール</button>
+    <button class="btn" id="logoutBtn">ログアウト</button>
   </div>
 </header>
 
@@ -25,9 +40,24 @@
 <div class="modal-overlay hidden" id="profileModal">
   <div class="panel modal">
     <h2>プロフィール</h2>
+
+    <!-- プロフィール画像(対局中、プレイヤー名の上に表示される) -->
+    <div style="display:flex; align-items:center; gap:16px; margin:12px 0;">
+      <img id="profAvatar" class="avatar-preview" alt="" />
+      <div style="display:flex; flex-direction:column; gap:8px; align-items:flex-start;">
+        <input type="file" id="avatarFile" accept="image/png,image/jpeg,image/webp,image/gif" style="display:none;" />
+        <button class="btn" id="avatarPickBtn">画像を選ぶ</button>
+        <button class="btn" id="avatarRemoveBtn">画像を削除</button>
+      </div>
+    </div>
+    <div id="avatarMsg" style="min-height:18px; font-size:13px; color:var(--text-sub); margin-bottom:8px;"></div>
+
     <p>ユーザー名: <b id="profUsername">-</b></p>
     <p>ユーザーID: <b id="profUserId">-</b></p>
-    <button class="btn" onclick="closeModal('profileModal')">閉じる</button>
+    <div style="display:flex; gap:10px; margin-top:12px;">
+      <button class="btn" onclick="closeModal('profileModal')">閉じる</button>
+      <button class="btn" id="logoutBtn2">ログアウト</button>
+    </div>
   </div>
 </div>
 

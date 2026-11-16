@@ -45,6 +45,32 @@ async function getSession(request: Request, env: Env): Promise<{ userId: string;
   return row || null;
 }
 
+// ---------- プロフィール画像 ----------
+// users テーブルに avatar(画像のdata URL) と avatar_updated(更新時刻) の列が無ければ追加する。
+// (既存のDBにマイグレーションを手で流さなくても動くようにするため)
+let userColumnsReady = false;
+
+async function ensureUserColumns(env: Env) {
+  if (userColumnsReady) return;
+  const cols = await env.DB.prepare('PRAGMA table_info(users)').all();
+  const names = new Set((cols.results || []).map((r: any) => String(r.name)));
+  if (!names.has('avatar')) {
+    await env.DB.prepare('ALTER TABLE users ADD COLUMN avatar TEXT').run();
+  }
+  if (!names.has('avatar_updated')) {
+    await env.DB.prepare('ALTER TABLE users ADD COLUMN avatar_updated INTEGER').run();
+  }
+  userColumnsReady = true;
+}
+
+// data URL に使える画像形式と、保存できる大きさ(文字数)の上限
+const AVATAR_DATA_URL = /^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/=]+$/;
+const AVATAR_MAX_LENGTH = 200_000;
+
+function avatarUrlFor(userId: string, updated: number | null | undefined): string | null {
+  return updated ? `/api/avatar/${encodeURIComponent(userId)}?v=${updated}` : null;
+}
+
 async function loadDebugDict(env: Env): Promise<WordDef[]> {
   const columns = await env.DB
     .prepare('PRAGMA table_info(words)')
@@ -168,7 +194,74 @@ export default {
       if (path === '/api/me') {
         const session = await getSession(request, env);
         if (!session) return json({ error: 'unauthorized' }, { status: 401 });
-        return json({ user: session });
+
+        let avatarUrl: string | null = null;
+        try {
+          await ensureUserColumns(env);
+          const row = await env.DB.prepare('SELECT avatar_updated AS updated FROM users WHERE user_id = ?')
+            .bind(session.userId).first<{ updated: number | null }>();
+          avatarUrl = avatarUrlFor(session.userId, row?.updated);
+        } catch {
+          avatarUrl = null;
+        }
+
+        return json({ user: { ...session, avatarUrl } });
+      }
+
+      // プロフィール画像の設定(avatar: data URL) / 削除(avatar: null)
+      if (path === '/api/profile/avatar' && request.method === 'POST') {
+        const session = await getSession(request, env);
+        if (!session) return json({ error: 'unauthorized' }, { status: 401 });
+
+        const body = await request.json() as { avatar?: string | null };
+        await ensureUserColumns(env);
+
+        if (body.avatar === null || body.avatar === undefined || body.avatar === '') {
+          await env.DB.prepare('UPDATE users SET avatar = NULL, avatar_updated = NULL WHERE user_id = ?')
+            .bind(session.userId).run();
+          return json({ ok: true, avatarUrl: null });
+        }
+
+        if (
+          typeof body.avatar !== 'string' ||
+          body.avatar.length > AVATAR_MAX_LENGTH ||
+          !AVATAR_DATA_URL.test(body.avatar)
+        ) {
+          return json({ error: '画像はPNG・JPEG・WebPの小さな画像にしてください' }, { status: 400 });
+        }
+
+        const updated = Math.floor(Date.now() / 1000);
+        await env.DB.prepare('UPDATE users SET avatar = ?, avatar_updated = ? WHERE user_id = ?')
+          .bind(body.avatar, updated, session.userId).run();
+
+        return json({ ok: true, avatarUrl: avatarUrlFor(session.userId, updated) });
+      }
+
+      // プロフィール画像の配信(対局画面などの <img> から使う)
+      if (path.startsWith('/api/avatar/') && request.method === 'GET') {
+        const userId = decodeURIComponent(path.slice('/api/avatar/'.length));
+        try {
+          await ensureUserColumns(env);
+          const row = await env.DB.prepare('SELECT avatar FROM users WHERE user_id = ?')
+            .bind(userId).first<{ avatar: string | null }>();
+
+          const m = row?.avatar?.match(/^data:(image\/(?:png|jpeg|webp));base64,(.+)$/);
+          if (!m) return new Response('not found', { status: 404 });
+
+          const bin = atob(m[2]);
+          const bytes = new Uint8Array(bin.length);
+          for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+
+          return new Response(bytes, {
+            headers: {
+              'Content-Type': m[1],
+              // URLに更新時刻(?v=)が付くので、長めにキャッシュしてよい
+              'Cache-Control': 'public, max-age=86400',
+            },
+          });
+        } catch {
+          return new Response('not found', { status: 404 });
+        }
       }
 
       // ---------- 一時デバッグ: 手牌判定 ----------

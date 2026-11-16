@@ -7,6 +7,7 @@ async function init() {
   me = data.user;
   document.getElementById('profUsername').textContent = me.username;
   document.getElementById('profUserId').textContent = me.userId;
+  showAvatar(me.avatarUrl);
   connectLobby();
 }
 
@@ -24,6 +25,113 @@ function openModal(id) { document.getElementById(id).classList.remove('hidden');
 function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
 
 document.getElementById('profileBtn').onclick = () => openModal('profileModal');
+
+// ---------- ログアウト ----------
+async function logout() {
+  try {
+    await fetch('/api/logout', { method: 'POST' });
+  } finally {
+    // セッションCookieはサーバーが消す。ログイン画面へ戻る。
+    location.replace('/login.html');
+  }
+}
+
+document.getElementById('logoutBtn').onclick = logout;
+document.getElementById('logoutBtn2').onclick = logout;
+
+// ---------- プロフィール画像 ----------
+const AVATAR_SIZE = 128; // 保存する画像の一辺(px)。小さく切り出して保存する
+
+// 画像が無いときは、ユーザー名の頭文字の丸を絵として作って表示する
+function initialAvatarDataUrl() {
+  const c = document.createElement('canvas');
+  c.width = c.height = AVATAR_SIZE;
+  const g = c.getContext('2d');
+  g.fillStyle = '#20283a';
+  g.fillRect(0, 0, AVATAR_SIZE, AVATAR_SIZE);
+  g.fillStyle = '#e8d9b0';
+  g.font = 'bold 64px sans-serif';
+  g.textAlign = 'center';
+  g.textBaseline = 'middle';
+  g.fillText(Array.from(me?.username || '?')[0] || '?', AVATAR_SIZE / 2, AVATAR_SIZE / 2 + 4);
+  return c.toDataURL('image/png');
+}
+
+function showAvatar(url) {
+  document.getElementById('profAvatar').src = url || initialAvatarDataUrl();
+}
+
+// 選んだ画像を、中央で正方形に切り出して AVATAR_SIZE x AVATAR_SIZE に縮小し、data URLにする
+function resizeToDataUrl(file) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    const objectUrl = URL.createObjectURL(file);
+
+    img.onload = () => {
+      URL.revokeObjectURL(objectUrl);
+
+      const side = Math.min(img.width, img.height);
+      const sx = (img.width - side) / 2;
+      const sy = (img.height - side) / 2;
+
+      const c = document.createElement('canvas');
+      c.width = c.height = AVATAR_SIZE;
+      c.getContext('2d').drawImage(img, sx, sy, side, side, 0, 0, AVATAR_SIZE, AVATAR_SIZE);
+
+      // WebPに対応していないブラウザでは、PNGが返ってくる(どちらもサーバーで受け付ける)
+      let dataUrl = c.toDataURL('image/webp', 0.85);
+      if (!dataUrl.startsWith('data:image/webp')) dataUrl = c.toDataURL('image/png');
+
+      resolve(dataUrl);
+    };
+
+    img.onerror = () => {
+      URL.revokeObjectURL(objectUrl);
+      reject(new Error('画像を読み込めませんでした'));
+    };
+
+    img.src = objectUrl;
+  });
+}
+
+async function saveAvatar(avatar) {
+  const msg = document.getElementById('avatarMsg');
+  msg.textContent = '保存中...';
+
+  const res = await fetch('/api/profile/avatar', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ avatar }),
+  });
+  const data = await res.json().catch(() => ({}));
+
+  if (!res.ok) {
+    msg.textContent = data.error || '保存に失敗しました';
+    return;
+  }
+
+  me.avatarUrl = data.avatarUrl;
+  showAvatar(me.avatarUrl);
+  msg.textContent = avatar ? 'プロフィール画像を設定しました' : 'プロフィール画像を削除しました';
+}
+
+document.getElementById('avatarPickBtn').onclick = () =>
+  document.getElementById('avatarFile').click();
+
+document.getElementById('avatarFile').onchange = async (ev) => {
+  const file = ev.target.files && ev.target.files[0];
+  ev.target.value = ''; // 同じ画像をもう一度選べるようにする
+  if (!file) return;
+
+  const msg = document.getElementById('avatarMsg');
+  try {
+    await saveAvatar(await resizeToDataUrl(file));
+  } catch (e) {
+    msg.textContent = e.message || '画像を設定できませんでした';
+  }
+};
+
+document.getElementById('avatarRemoveBtn').onclick = () => saveAvatar(null);
 document.getElementById('createRoomBtn').onclick = () => openModal('createModal');
 document.getElementById('joinRoomBtn').onclick = () => openModal('joinModal');
 document.getElementById('friendBtn').onclick = async () => {
