@@ -1,5 +1,6 @@
 import { Tile, buildWall, rollDice2, nextForDora } from './mahjong/tiles';
 import { WordDef, canWin, findAllDecompositions, findCallCandidates, CallCandidate, findRiichiDiscards } from './mahjong/words';
+import { chooseCpuCall, chooseCpuDiscard } from './mahjong/cpu';
 import { computeScore } from './mahjong/score';
 
 export interface RoomRules {
@@ -24,6 +25,7 @@ interface Player {
   ready: boolean;
   connected: boolean;
   isDev?: boolean; // 開発者モードで自動的に埋められた席かどうか
+  isCpu?: boolean; // CPUの席かどうか(ソケットを持たず、サーバーが打牌・鳴きを決める)
   avatarV?: number; // プロフィール画像の更新時刻(0/未設定なら画像なし)
 }
 
@@ -43,7 +45,8 @@ interface PendingCall {
   tile: Tile;
   candidatesBySeat: Record<number, CallCandidate[]>;
   decided: Set<number>;
-  chosen: { seat: number; candidate: CallCandidate } | null;
+  // 鳴きを受け入れた全員の宣言。解決時に優先順位(下家>対面>上家)で選び直す。
+  accepted: { seat: number; candidate: CallCandidate }[];
 }
 type Pending = PendingRon | PendingCall | null;
 
@@ -88,6 +91,11 @@ export class GameRoom {
   wordDict: WordDef[] = [];
   dictLoadedAt = 0; // 辞書を最後にD1から読んだ時刻(ms)
   initialized = false;
+
+  // CPUの打牌タイマー。WebSocketが繋がっている間はDOが常駐するため、
+  // 短い setTimeout で人間が見える間を置いて打たせる。世代番号で古いタイマーを無効化する。
+  cpuTimer: ReturnType<typeof setTimeout> | null = null;
+  cpuTimerGeneration = 0;
 
   constructor(state: DurableObjectState, env: any) {
     this.state = state;
@@ -342,6 +350,7 @@ export class GameRoom {
       handCount: p.hand.length, discards: p.discards.map((t) => t.kind),
       melds: p.melds.map((m) => ({ word: m.word, tiles: m.tiles.map((t) => t.kind) })),
       riichi: p.riichi, score: p.score, ready: p.ready, connected: p.connected,
+      isCpu: !!p.isCpu,
       // プロフィール画像(設定していなければ null)。開発者モードの席(`ID#席番号`)も元のユーザーの画像を使う
       avatarUrl: p.avatarV
         ? `/api/avatar/${encodeURIComponent(p.userId.split('#')[0])}?v=${p.avatarV}`
@@ -460,6 +469,12 @@ export class GameRoom {
 
   onMessage(seat: number, msg: any) {
     switch (msg.type) {
+      case 'addCpu':
+        this.addCpu(seat);
+        break;
+      case 'removeCpu':
+        this.removeCpu(seat, msg.targetSeat);
+        break;
       case 'setRules':
         if (this.isHostSeat(seat) && this.phase === 'waiting') {
           this.rules = { ...this.rules, ...msg.rules };
@@ -495,6 +510,140 @@ export class GameRoom {
     if (this.players.length !== this.rules.playerCount) return;
     if (!this.players.every((p) => p.ready)) return;
     this.startHand(true);
+  }
+
+  // ---------------- CPU ----------------
+
+  // CPUを1席追加する。ホストだけが、待機中に、空きがある場合に呼べる。
+  // CPUは最初から準備OKなので、人数が揃い人間が全員準備OKになればすぐ対局が始まる。
+  addCpu(requesterSeat: number) {
+    if (this.phase !== 'waiting') {
+      this.send(requesterSeat, { type: 'notice', message: '対局開始後はCPUを追加できません。' });
+      return;
+    }
+    if (!this.isHostSeat(requesterSeat)) {
+      this.send(requesterSeat, { type: 'notice', message: 'CPUを追加できるのはホストだけです。' });
+      return;
+    }
+    if (this.players.length >= this.rules.playerCount) {
+      this.send(requesterSeat, { type: 'notice', message: '部屋が満員です。' });
+      return;
+    }
+    const seat = this.players.length;
+    const usedNames = new Set(this.players.map((p) => p.username));
+    let n = 1;
+    while (usedNames.has(`CPU ${n}`)) n++;
+    this.players.push({
+      seat, userId: `cpu:${this.roomNumber}:${seat}`, username: `CPU ${n}`,
+      hand: [], discards: [], melds: [],
+      riichi: false, ippatsuActive: false, score: 25000, ready: true, connected: true,
+      isCpu: true,
+    });
+    this.broadcastState();
+    this.maybeStart();
+  }
+
+  // CPUを1席削除する。席番号の詰め直しで人間の接続情報がずれないよう、
+  // 一番最後の席がCPUの場合だけ削除できる。
+  removeCpu(requesterSeat: number, targetSeat: number) {
+    if (this.phase !== 'waiting') {
+      this.send(requesterSeat, { type: 'notice', message: '対局開始後はCPUを削除できません。' });
+      return;
+    }
+    if (!this.isHostSeat(requesterSeat)) {
+      this.send(requesterSeat, { type: 'notice', message: 'CPUを削除できるのはホストだけです。' });
+      return;
+    }
+    if (targetSeat !== this.players.length - 1 || !this.players[targetSeat]?.isCpu) {
+      this.send(requesterSeat, { type: 'notice', message: '一番最後の席のCPUだけ削除できます。' });
+      return;
+    }
+    this.players.pop();
+    this.broadcastState();
+  }
+
+  // 手番がCPUなら、少し間を置いて打たせるタイマーを仕掛ける。
+  maybeScheduleCpuTurn() {
+    if (this.phase !== 'playing' || this.pending) return;
+    if (!this.players[this.currentTurnSeat]?.isCpu) return;
+    if (this.cpuTimer) clearTimeout(this.cpuTimer);
+    this.cpuTimer = null;
+    const generation = ++this.cpuTimerGeneration;
+    this.cpuTimer = setTimeout(() => {
+      this.cpuTimer = null;
+      if (generation !== this.cpuTimerGeneration) return;
+      try {
+        this.runCpuTurn();
+      } catch (e) {
+        console.error('CPUターン失敗:', e);
+      }
+    }, 700);
+  }
+
+  // CPUの手番を1回進める。ツモ和了できるなら宣言し、そうでなければ
+  // 手牌分析に基づいて1枚切る(リーチできる場合は宣言する)。
+  runCpuTurn() {
+    if (this.phase !== 'playing' || this.pending) return;
+    const seat = this.currentTurnSeat;
+    const p = this.players[seat];
+    if (!p?.isCpu) return;
+    if (this.computeCanTsumo(seat)) {
+      this.handleTsumoWin(seat);
+      return;
+    }
+    const decision = chooseCpuDiscard({
+      handKinds: p.hand.map((t) => t.kind),
+      meldWordChars: p.melds.flatMap((m) => m.word.split('')),
+      dict: this.wordDict,
+      doraKinds: [
+        ...this.currentDora(),
+        ...(p.riichi ? this.uraDoraIndicators.map(nextForDora) : []),
+      ],
+      drawnKind: this.turnDrawnTile?.kind ?? null,
+      riichiDiscards: this.computeRiichiDiscards(seat),
+      isRiichi: p.riichi,
+    });
+    if (!decision.discardKind) return;
+    // ツモ切り(切る牌がツモ牌と同じ牌種)の場合はツモ牌そのものを切る。
+    const drawn = this.turnDrawnTile;
+    const tile = (drawn && drawn.kind === decision.discardKind && p.hand.some((t) => t.id === drawn.id))
+      ? drawn
+      : p.hand.find((t) => t.kind === decision.discardKind);
+    if (!tile) return;
+    this.handleDiscard(seat, tile.id, decision.riichi);
+  }
+
+  // ロン・鳴きの判断待ちで、CPUの席のぶんをその場で決める。
+  // 人間の判断は待ったままなので、解決は全員の判断が出揃ってから行われる。
+  decideCpuPending() {
+    if (!this.pending) return;
+    if (this.pending.kind === 'ron') {
+      for (const seat of [...this.pending.eligibleSeats]) {
+        if (!this.pending || this.pending.kind !== 'ron') break;
+        if (this.players[seat]?.isCpu) {
+          // ロンできる席だけが eligible に入っているので、CPUは必ずロンする。
+          this.handleRonDecision(seat, true);
+        }
+      }
+      return;
+    }
+    const seats = Object.keys(this.pending.candidatesBySeat).map(Number);
+    for (const seat of seats) {
+      if (!this.pending || this.pending.kind !== 'call') break;
+      const p = this.players[seat];
+      if (!p?.isCpu) continue;
+      const candidates = this.pending.candidatesBySeat[seat];
+      if (!candidates) continue;
+      const decision = chooseCpuCall({
+        handKinds: p.hand.map((t) => t.kind),
+        meldWordChars: p.melds.flatMap((m) => m.word.split('')),
+        dict: this.wordDict,
+        doraKinds: this.currentDora(),
+        candidates,
+        isRiichi: p.riichi,
+      });
+      this.handleCallDecision(seat, decision.accept, decision.word);
+    }
   }
 
   // ---------------- 対局進行 ----------------
@@ -563,6 +712,7 @@ export class GameRoom {
     this.turnDrawnTile = null; // 親は既に14枚持っているので追加ツモ不要
     this.broadcastState();
     this.checkOwnTsumoPossible(this.dealerSeat);
+    this.maybeScheduleCpuTurn();
   }
 
   currentDora(): string[] {
@@ -639,6 +789,7 @@ export class GameRoom {
     }
     this.pending = { kind: 'ron', discarderSeat, tile, eligibleSeats: eligible, decided: new Set(), ronSeats: [] };
     for (const seat of eligible) this.send(seat, { type: 'ronPrompt', tile: tile.kind, seat });
+    this.decideCpuPending();
   }
 
   handleRonDecision(seat: number, accept: boolean) {
@@ -675,8 +826,9 @@ export class GameRoom {
       this.advanceTurnAfterDiscard(discarderSeat);
       return;
     }
-    this.pending = { kind: 'call', discarderSeat, tile, candidatesBySeat, decided: new Set(), chosen: null };
+    this.pending = { kind: 'call', discarderSeat, tile, candidatesBySeat, decided: new Set(), accepted: [] };
     for (const seat of seats) this.send(seat, { type: 'callPrompt', tile: tile.kind, candidates: candidatesBySeat[seat], seat });
+    this.decideCpuPending();
   }
 
   // 優先順位: 下家 > 対面 > 上家 (捨てた人から見て)
@@ -694,8 +846,8 @@ export class GameRoom {
     pend.decided.add(seat);
     if (accept && word) {
       const cand = pend.candidatesBySeat[seat].find((c) => c.word === word);
-      if (cand && !pend.chosen) {
-        pend.chosen = { seat, candidate: cand };
+      if (cand) {
+        pend.accepted.push({ seat, candidate: cand });
       }
     }
     const allSeats = Object.keys(pend.candidatesBySeat).map(Number);
@@ -707,22 +859,18 @@ export class GameRoom {
   resolveCallPhase() {
     const pend = this.pending as PendingCall;
     this.pending = null;
-    if (!pend.chosen) {
+    // 優先順位: 複数人が鳴き宣言していた場合、下家>対面>上家の順で最優先の人を採用する。
+    // (以前は最初に accept が届いた人をそのまま採用していた)
+    const priority = this.callPriorityOrder(pend.discarderSeat);
+    const winner = priority
+      .map((s) => pend.accepted.find((a) => a.seat === s))
+      .find((a) => a !== undefined);
+    if (!winner) {
       this.advanceTurnAfterDiscard(pend.discarderSeat);
       return;
     }
-    // 優先順位判定: 複数人が鳴き宣言していた場合、下家>対面>上家の順で最優先の人を採用
-    const priority = this.callPriorityOrder(pend.discarderSeat);
-    let winnerSeat = pend.chosen.seat;
-    let winnerCand = pend.chosen.candidate;
-    for (const s of priority) {
-      // すでにchosenが優先順位内で最初に accept した人とは限らないため、
-      // 全acceptした人の中から優先順位最上位を選び直す
-    }
-    // pend.chosen は最初に accept が来た人を暫定採用しているため、
-    // 全員の決定が出揃った時点で優先順位に沿って選び直す。
-    // (簡易実装: decided集合の中でacceptしたseat一覧を再構成)
-    // ここでは chosen をそのまま採用(下家側から先に送信される運用を想定)。
+    const winnerSeat = winner.seat;
+    const winnerCand = winner.candidate;
 
     const discarder = this.players[pend.discarderSeat];
     const caller = this.players[winnerSeat];
@@ -824,6 +972,7 @@ export class GameRoom {
 
       this.broadcastState();
       this.checkOwnTsumoPossible(winnerSeat);
+      this.maybeScheduleCpuTurn();
 
       // カンした人は嶺上牌をツモった状態で打牌待ち
       return;
@@ -837,6 +986,7 @@ export class GameRoom {
 
     this.broadcastState();
     this.checkOwnTsumoPossible(winnerSeat);
+    this.maybeScheduleCpuTurn();
 
     // 通常の鳴きはツモらず、そのまま打牌
   }
@@ -860,6 +1010,7 @@ export class GameRoom {
     this.turnDrawnTile = drawn;
     this.broadcastState();
     this.checkOwnTsumoPossible(nextSeat);
+    this.maybeScheduleCpuTurn();
   }
 
   handleTsumoWin(seat: number) {

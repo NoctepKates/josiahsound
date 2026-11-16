@@ -371,6 +371,113 @@ export function canWin(
   );
 }
 
+export interface PartialDecomposition {
+  words: string[]; // 使えた単語
+  covered: number; // 単語で覆えた文字数
+  leftover: string[]; // どの単語にも使えなかった文字
+}
+
+interface PartialBest {
+  words: string[];
+  covered: number;
+}
+
+/**
+ * 手牌のうち、辞書の単語で覆える文字数を最大化する分解を探す。
+ *
+ * 和了判定(canWin)は「全部覆えるか」だけを見るが、CPUの打牌評価では
+ * テンパイしていない手でも「あと何文字が単語になっていないか」が要る。
+ * そのための部分分解で、覆えた文字数が最大のものを返す。
+ * 同じ覆い方の場合は、単語数が少ない(長い単語を使った)方を優先する。
+ *
+ * memo は、同じ辞書・同じ残り文字構成で再利用できる探索結果。
+ * 複数の手牌をまとめて調べるときは同じ Map を渡すと速い。
+ */
+export function findBestPartialDecomposition(
+  handChars: string[],
+  dict: WordDef[],
+  memo: Map<string, PartialBest> = new Map(),
+): PartialDecomposition {
+  if (dict.length === 0) {
+    return { words: [], covered: 0, leftover: [...handChars] };
+  }
+
+  const prepared = prepareDict(dict);
+
+  function dfs(count: CharCount): PartialBest {
+    if (isEmpty(count)) {
+      return { words: [], covered: 0 };
+    }
+
+    const key = countKey(count);
+    const cached = memo.get(key);
+    if (cached) {
+      return { words: [...cached.words], covered: cached.covered };
+    }
+
+    // この文字を含む単語が1つも無い文字は、どうやっても余る。
+    // (choosePivot が null を返すのはこの場合)
+    const pivot = choosePivot(count, prepared);
+    if (!pivot) {
+      // 単語に含まれない文字だけを余りとして外す(他の文字を外すと覆い方が減る)。
+      const leftoverChar = Object.keys(count).find(
+        (ch) => !(prepared.byChar.get(ch) || []).length,
+      ) ?? Object.keys(count).sort()[0];
+      const rest = { ...count };
+      if (rest[leftoverChar] === 1) delete rest[leftoverChar];
+      else rest[leftoverChar] -= 1;
+      const best = dfs(rest);
+      memo.set(key, { words: [...best.words], covered: best.covered });
+      return best;
+    }
+
+    // 候補1: pivotの文字を1枚、余りとして諦める。
+    const skipped = { ...count };
+    if (skipped[pivot] === 1) delete skipped[pivot];
+    else skipped[pivot] -= 1;
+    let best = dfs(skipped);
+
+    // 候補2: pivotを含む単語を1語使う。
+    const candidates = prepared.byChar.get(pivot)!;
+    for (const word of candidates) {
+      const next = subtractPrepared(count, word);
+      if (!next) continue;
+      const child = dfs(next);
+      const covered = child.covered + word.length;
+      const words = [...child.words, word.word];
+      if (
+        covered > best.covered ||
+        (covered === best.covered && words.length < best.words.length)
+      ) {
+        best = { words, covered };
+      }
+    }
+
+    memo.set(key, { words: [...best.words], covered: best.covered });
+    return best;
+  }
+
+  const best = dfs(toCharCount(handChars));
+
+  // 余り文字 = 手牌から使った単語の文字を引いたもの
+  const remaining = toCharCount(handChars);
+  for (const word of best.words) {
+    for (const ch of [...word]) {
+      remaining[ch] -= 1;
+      if (remaining[ch] <= 0) delete remaining[ch];
+    }
+  }
+  const leftover: string[] = [];
+  for (const ch of handChars) {
+    if ((remaining[ch] || 0) > 0) {
+      leftover.push(ch);
+      remaining[ch] -= 1;
+    }
+  }
+
+  return { words: best.words, covered: best.covered, leftover };
+}
+
 /**
  * 鳴き候補を探す。
  *

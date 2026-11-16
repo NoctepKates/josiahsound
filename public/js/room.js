@@ -35,6 +35,7 @@ function connect() {
   ws.onmessage = (ev) => {
     const msg = JSON.parse(ev.data);
     if (msg.type === 'state') render(msg);
+    if (msg.type === 'notice') alert(msg.message);
     if (msg.type === 'matchEnd') { /* 対局終了はxiama/table側で処理 */ }
   };
   ws.onclose = () => { /* 再接続はxiama/table優先のため簡易に留める */ };
@@ -53,12 +54,21 @@ function render(state) {
     持ち時間: ${TIMER_LABEL[state.rules.timer]}
   `;
   document.getElementById('playerCountLabel').textContent = `(${state.players.length}/${state.rules.playerCount})`;
-  document.getElementById('playerList').innerHTML = state.players.map((p) => `
+  const isHost = !!(me && me.userId === state.hostUserId);
+  document.getElementById('playerList').innerHTML = state.players.map((p, idx) => `
     <div style="display:flex; justify-content:space-between; align-items:center; padding:8px 12px; background:var(--bg-panel-2); border-radius:8px;">
-      <span>${p.username} ${isHostPlayer(p, state) ? '<span style="color:var(--gold-bright); font-size:12px;">(ホスト)</span>' : ''}</span>
-      <span style="color:${p.ready ? '#4caf50' : 'var(--text-sub)'};">${p.ready ? '準備OK' : '未準備'}</span>
+      <span>${p.username} ${p.isCpu ? '<span style="color:var(--gold-bright); font-size:12px;">(CPU)</span>' : ''} ${isHostPlayer(p, state) ? '<span style="color:var(--gold-bright); font-size:12px;">(ホスト)</span>' : ''}</span>
+      <span style="display:flex; align-items:center; gap:8px;">
+        <span style="color:${p.ready ? '#4caf50' : 'var(--text-sub)'};">${p.ready ? '準備OK' : '未準備'}</span>
+        ${isHost && p.isCpu && idx === state.players.length - 1 ? `<button class="btn danger" onclick="removeCpu(${p.seat})">削除</button>` : ''}
+      </span>
     </div>
   `).join('');
+
+  // CPU追加はホストだけ。満員になったら押せなくする。
+  const addCpuBtn = document.getElementById('addCpuBtn');
+  addCpuBtn.classList.toggle('hidden', !isHost);
+  addCpuBtn.disabled = state.players.length >= state.rules.playerCount;
 
   const readyBtn = document.getElementById('readyBtn');
   const meInfo = state.players[state.yourSeat];
@@ -86,6 +96,19 @@ document.getElementById('readyBtn').onclick = () => {
 document.getElementById('devReadyAllBtn').onclick = () => {
   ws.send(JSON.stringify({ type: 'devReadyAll' }));
 };
+
+document.getElementById('addCpuBtn').onclick = () => {
+  if (ws && ws.readyState === WebSocket.OPEN) {
+    ws.send(JSON.stringify({ type: 'addCpu' }));
+  }
+};
+
+// CPUの削除(一番最後の席のCPUだけ)。playerList の削除ボタンから呼ぶ。
+function removeCpu(seat) {
+  if (ws && ws.readyState === WebSocket.OPEN) {
+    ws.send(JSON.stringify({ type: 'removeCpu', targetSeat: seat }));
+  }
+}
 
 document.getElementById('inviteBtn').onclick = async () => {
   document.getElementById('inviteModal').classList.remove('hidden');

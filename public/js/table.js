@@ -354,7 +354,7 @@ function render(s) {
         avatarHtml(p) +
         `<div class="player-name">` +
         `${isDealer ? '<span class="dealer-mark">親</span> ' : ''}` +
-        `${escapeHtmlText(p.username)}${p.connected ? '' : ' (切断)'}` +
+        `${escapeHtmlText(p.username)}${p.isCpu ? ' (CPU)' : ''}${p.connected ? '' : ' (切断)'}` +
         `</div>`;
     }
 
