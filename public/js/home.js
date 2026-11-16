@@ -203,6 +203,7 @@ async function createRoom() {
     length: document.getElementById('ruleLength').value,
     tileCountPerKind: Number(document.getElementById('ruleTileCount').value),
     timer: document.getElementById('ruleTimer').value,
+    tobi: document.getElementById('ruleTobi').value === 'ari',
   };
   const res = await fetch('/api/room/create', {
     method: 'POST', headers: { 'Content-Type': 'application/json' },

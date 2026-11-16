@@ -1,5 +1,5 @@
 import { Tile, buildWall, rollDice2, nextForDora } from './mahjong/tiles';
-import { WordDef, canWin, findAllDecompositions, findCallCandidates, CallCandidate, findRiichiDiscards } from './mahjong/words';
+import { WordDef, canWin, findAllDecompositions, findCallCandidates, CallCandidate, findRiichiDiscards, findWaits } from './mahjong/words';
 import { chooseCpuCall, chooseCpuDiscard } from './mahjong/cpu';
 import { computeScore } from './mahjong/score';
 
@@ -8,6 +8,7 @@ export interface RoomRules {
   length: 'ichikyoku' | 'tonpuu' | 'hanchan' | 'honchan'; // 一局・東風・半荘・本荘
   tileCountPerKind: number; // 2〜8
   timer: '5+20' | '5+300' | 'unlimited';
+  tobi: boolean; // 飛びあり(true)/なし(false)。ありの場合、持ち点がマイナスになった時点で対局終了
 }
 
 interface Meld { word: string; tiles: Tile[]; from: number; }
@@ -21,6 +22,11 @@ interface Player {
   melds: Meld[];
   riichi: boolean;
   ippatsuActive: boolean;
+  // フリテン(ロンだけできない。ツモ・鳴きはできる)。
+  // furitenTemp: ロンを見逃した直後。自分の次の打牌で解除される。
+  // furitenRiichi: リーチ後にロンを見逃した。その局が終わるまで続く。
+  furitenTemp?: boolean;
+  furitenRiichi?: boolean;
   score: number;
   ready: boolean;
   connected: boolean;
@@ -55,6 +61,7 @@ const DEFAULT_RULES: RoomRules = {
   length: 'tonpuu',
   tileCountPerKind: 4,
   timer: '5+20',
+  tobi: true,
 };
 
 export class GameRoom {
@@ -385,6 +392,26 @@ export class GameRoom {
     return chars.length === 14 && canWin(chars, this.wordDict);
   }
 
+  // 捨て牌フリテン: 今の待ち牌のうち1種類でも、自分の捨て牌に含まれている。
+  // 待ち牌はデバッグ画面と同じ定義(findWaits)。13枚でない手(打牌前の14枚など)は対象外。
+  isDiscardFuriten(seat: number): boolean {
+    const p = this.players[seat];
+    if (!p) return false;
+    const chars = this.handCharsForWinCheck(p);
+    if (chars.length !== 13) return false;
+    const waits = findWaits(chars, this.wordDict);
+    if (waits.length === 0) return false;
+    const discarded = new Set(p.discards.map((t) => t.kind));
+    return waits.some((w) => discarded.has(w));
+  }
+
+  // フリテンかどうか。ロンだけができなくなり、ツモと鳴きはできる。
+  isFuriten(seat: number): boolean {
+    const p = this.players[seat];
+    if (!p) return false;
+    return !!(p.furitenTemp || p.furitenRiichi || this.isDiscardFuriten(seat));
+  }
+
   broadcastState() {
     const base = {
       type: 'state',
@@ -460,6 +487,8 @@ export class GameRoom {
         // リーチ宣言のときに切れる牌種(これ以外を切るとテンパイにならない)
         riichiDiscards,
         canTsumo: isMyTurnNow && this.computeCanTsumo(viewSeat),
+        // 自分のフリテン(他人の手牌情報が漏れないよう、自分の席ぶんだけ送る)
+        yourFuriten: this.phase === 'playing' ? this.isFuriten(viewSeat) : false,
       }));
     }
     for (const ws of this.spectatorSockets) {
@@ -678,6 +707,7 @@ export class GameRoom {
 
     for (const p of this.players) {
       p.hand = []; p.discards = []; p.melds = []; p.riichi = false; p.ippatsuActive = false;
+      p.furitenTemp = false; p.furitenRiichi = false;
     }
 
     // 4牌ずつ3回
@@ -766,6 +796,8 @@ export class GameRoom {
     const [tile] = p.hand.splice(idx, 1);
     p.discards.push(tile);
     this.turnDrawnTile = null;
+    // 自分の打牌で、一時的なフリテンは解除される(リーチ後のフリテンは局終了まで残る)。
+    p.furitenTemp = false;
 
     // 他家の一発チャンスを消す（自分以外のリーチの一発は他家の鳴き/自分の打牌で消える等の細則は簡略化）
     for (const pl of this.players) if (pl.seat !== seat) pl.ippatsuActive = false;
@@ -780,8 +812,12 @@ export class GameRoom {
     for (let i = 1; i < n; i++) {
       const seat = (discarderSeat + i) % n;
       const p = this.players[seat];
+      // フリテンの席はロンできない(見逃し・リーチ後のフラグが立っている席は和了判定を省く)。
+      if (p.furitenTemp || p.furitenRiichi) continue;
       const chars = [...this.handCharsForWinCheck(p), tile.kind];
-      if (canWin(chars, this.wordDict)) eligible.push(seat);
+      if (!canWin(chars, this.wordDict)) continue;
+      if (this.isDiscardFuriten(seat)) continue;
+      eligible.push(seat);
     }
     if (eligible.length === 0) {
       this.offerCalls(discarderSeat, tile);
@@ -797,6 +833,16 @@ export class GameRoom {
     if (!this.pending.eligibleSeats.includes(seat) || this.pending.decided.has(seat)) return;
     this.pending.decided.add(seat);
     if (accept) this.pending.ronSeats.push(seat);
+    if (!accept) {
+      // ロンを見逃すとフリテンになる。リーチ後はその局が終わるまで、通常は自分の次の打牌まで。
+      const p = this.players[seat];
+      if (p) {
+        if (p.riichi) p.furitenRiichi = true;
+        else p.furitenTemp = true;
+      }
+      // フリテンになったことを、次に送るstateに反映させる。
+      this.broadcastState();
+    }
     if (this.pending.decided.size === this.pending.eligibleSeats.length) {
       this.resolveRonPhase();
     }
@@ -1099,15 +1145,22 @@ export class GameRoom {
   }
 
   endHandAndAdvance(dealerContinues: boolean) {
+    // 飛び: 持ち点がマイナス(0点ちょうどは飛ばない)になった人がいれば、局数に関わらず対局終了。
+    // tobi が未設定の古い部屋は、デフォルトの「あり」として扱う。
+    if (this.rules.tobi !== false) {
+      const tobiSeats = this.players.filter((p) => p.score < 0).map((p) => p.seat);
+      if (tobiSeats.length > 0) {
+        this.finishMatch('tobi', tobiSeats);
+        return;
+      }
+    }
     this.honba = dealerContinues ? this.honba + 1 : 0;
     if (!dealerContinues) {
       this.round += 1;
       this.dealerSeat = (this.dealerSeat + 1) % this.rules.playerCount;
     }
     if (this.isMatchOver()) {
-      this.phase = 'finished';
-      this.broadcastRaw({ type: 'matchEnd', finalScores: this.players.map((p) => ({ seat: p.seat, username: p.username, score: p.score })) });
-      this.persist();
+      this.finishMatch('complete');
       return;
     }
     for (const p of this.players) p.ready = false;
@@ -1115,6 +1168,17 @@ export class GameRoom {
     this.broadcastState();
     // 実運用では次局開始も全員準備OKで開始する想定。ここでは自動継続する。
     this.startHand(false);
+  }
+
+  finishMatch(reason: 'complete' | 'tobi', tobiSeats: number[] = []) {
+    this.phase = 'finished';
+    this.broadcastRaw({
+      type: 'matchEnd',
+      reason,
+      tobiSeats: reason === 'tobi' ? tobiSeats : [],
+      finalScores: this.players.map((p) => ({ seat: p.seat, username: p.username, score: p.score })),
+    });
+    this.persist();
   }
 
   isMatchOver(): boolean {

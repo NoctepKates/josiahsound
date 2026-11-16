@@ -354,7 +354,7 @@ function render(s) {
         avatarHtml(p) +
         `<div class="player-name">` +
         `${isDealer ? '<span class="dealer-mark">親</span> ' : ''}` +
-        `${escapeHtmlText(p.username)}${p.isCpu ? ' (CPU)' : ''}${p.connected ? '' : ' (切断)'}` +
+        `${escapeHtmlText(p.username)}${p.isCpu ? ' (CPU)' : ''}${divKey === 'self' && s.yourFuriten ? ' <span style="color:#ff8f8f; font-size:12px;">フリテン</span>' : ''}${p.connected ? '' : ' (切断)'}` +
         `</div>`;
     }
 
@@ -1338,7 +1338,10 @@ function showMatchEnd(msg) {
       );
 
   card.innerHTML =
-    `<h2>対局終了</h2>` +
+    `<h2>対局終了${msg.reason === 'tobi' ? '（飛び）' : ''}</h2>` +
+    (msg.reason === 'tobi'
+      ? `<div style="color:var(--text-sub); font-size:13px; margin-bottom:8px;">持ち点がマイナスになったため、対局終了しました。</div>`
+      : '') +
     sorted
       .map(
         (p, i) =>

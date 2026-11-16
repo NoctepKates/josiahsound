@@ -51,7 +51,8 @@ function render(state) {
     人数: ${state.rules.playerCount}人麻雀<br>
     形式: ${LENGTH_LABEL[state.rules.length]}<br>
     各文字の枚数: ${state.rules.tileCountPerKind}枚<br>
-    持ち時間: ${TIMER_LABEL[state.rules.timer]}
+    持ち時間: ${TIMER_LABEL[state.rules.timer]}<br>
+    飛び: ${state.rules.tobi !== false ? 'あり' : 'なし'}
   `;
   document.getElementById('playerCountLabel').textContent = `(${state.players.length}/${state.rules.playerCount})`;
   const isHost = !!(me && me.userId === state.hostUserId);
