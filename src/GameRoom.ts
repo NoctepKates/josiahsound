@@ -433,6 +433,7 @@ export class GameRoom {
       dealerSeat: this.dealerSeat,
       handId: this.handId,
       currentTurnSeat: this.currentTurnSeat,
+      awaitingDecisions: this.pending !== null,
       doraIndicators: this.doraIndicators,
       wallRemaining: this.wall.length,
       players: this.players.map((p) => this.publicPlayerView(p)),
@@ -844,6 +845,16 @@ export class GameRoom {
 
   handleDiscard(seat: number, tileId: string, riichiDeclare: boolean) {
     if (this.phase !== 'playing' || this.currentTurnSeat !== seat) return;
+    // ロン・鳴きの確認中は、次の打牌を受け付けない。
+    // (確認中に2枚目を切れると、pending が上書きされて進行が壊れ、
+    //  確認後に余計なツモが発生して多牌になる)
+    if (this.pending) {
+      this.send(seat, {
+        type: 'notice',
+        message: 'ロン・鳴きの確認中です。',
+      });
+      return;
+    }
     const p = this.players[seat];
     // クライアントはkindのみ送ってくる簡易実装のため、id一致→kind一致の順でフォールバックする
     let idx = p.hand.findIndex((t) => t.id === tileId);
@@ -906,6 +917,8 @@ export class GameRoom {
     this.pending = { kind: 'ron', discarderSeat, tile, eligibleSeats: eligible, decided: new Set(), ronSeats: [] };
     for (const seat of eligible) this.send(seat, { type: 'ronPrompt', tile: tile.kind, seat });
     this.decideCpuPending();
+    // 確認待ちのまま残った場合は、stateを送り直して確認中であることを全員に知らせる
+    if (this.pending) this.broadcastState();
   }
 
   handleRonDecision(seat: number, accept: boolean) {
@@ -957,6 +970,8 @@ export class GameRoom {
     this.pending = { kind: 'call', discarderSeat, tile, candidatesBySeat, decided: new Set(), accepted: [] };
     for (const seat of seats) this.send(seat, { type: 'callPrompt', tile: tile.kind, candidates: candidatesBySeat[seat], seat });
     this.decideCpuPending();
+    // 確認待ちのまま残った場合は、stateを送り直して確認中であることを全員に知らせる
+    if (this.pending) this.broadcastState();
   }
 
   // 優先順位: 下家 > 対面 > 上家 (捨てた人から見て)

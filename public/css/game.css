@@ -1539,8 +1539,8 @@ body {
 /* 右家 */
 
 .player-tag.corner-r1 {
-  top: 8px;
-  left: 8px;
+  bottom: 8px;
+  right: 8px;
 }
 
 
@@ -1555,8 +1555,8 @@ body {
 /* 左家 */
 
 .player-tag.corner-r3 {
-  bottom: 8px;
-  right: 8px;
+  top: 8px;
+  left: 8px;
 }
 
 /* 自分の手牌：六面体全体を約1.33倍に拡大 */
@@ -2134,8 +2134,8 @@ body {
 }
 
 /* 右側の隅のタグは、画像・名前とも右にそろえる */
-.player-tag.corner-r2,
-.player-tag.corner-r3 {
+.player-tag.corner-r1,
+.player-tag.corner-r2 {
   align-items: flex-end;
 }
 

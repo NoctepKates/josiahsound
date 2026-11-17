@@ -800,6 +800,10 @@ document.getElementById('devDebugToggle')?.addEventListener('click', () => {
 
 function attachHandHandlers(handEl) {
   handEl.onclick = (e) => {
+    // ロン・鳴きの確認中は打牌できない(確認中に切れると進行が壊れる)。
+    // 確認する側はアクションバーのボタンで回答する。
+    if (state?.awaitingDecisions) return;
+
     const wraps = [
       ...handEl.querySelectorAll('.tile-wrap')
     ];
@@ -1014,6 +1018,7 @@ function canDeclareRiichi() {
 function doDiscard() {
   if (!selectedTileId) return;
   if (!state) return;
+  if (state.awaitingDecisions) return;
 
   // リーチ宣言中は、切ればテンパイになる牌だけ切れる(サーバーが送る riichiDiscards)
   if (riichiMode) {
@@ -1232,6 +1237,7 @@ function renderWaitPreview() {
 function maybeAutoTsumogiri(s) {
   if (!s || s.devMode) return;
   if (s.phase !== 'playing') return;
+  if (s.awaitingDecisions) return;
 
   const my = s.yourSeat;
   if (my === -1 || s.currentTurnSeat !== my) return;
@@ -1250,6 +1256,7 @@ function maybeAutoTsumogiri(s) {
 
   setTimeout(() => {
     if (!state || state.phase !== 'playing') return;
+    if (state.awaitingDecisions) return;
     if (state.currentTurnSeat !== state.yourSeat) return;
     if (!state.players[state.yourSeat]?.riichi) return;
     if (canTsumoNow) return;
