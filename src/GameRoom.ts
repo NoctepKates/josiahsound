@@ -78,6 +78,8 @@ export class GameRoom {
   players: Player[] = [];
   round = 1; // 東1局=1, 東2局=2 ...
   honba = 0;
+  handId = 0; // 局の通し番号。startHand ごとに+1。クライアントが結果画面の表示/非表示を判断するために使う
+  nextHandPending = false; // 局が終わり、全員の「次局への準備OK」を待っている状態
   riichiSticks = 0; // 供託のリーチ棒(1000点棒)の本数。和了した人が総取りし、流局では持ち越す
   dealerSeat = 0;
   wall: Tile[] = [];
@@ -222,6 +224,8 @@ export class GameRoom {
       honba: this.honba,
       riichiSticks: this.riichiSticks,
       dealerSeat: this.dealerSeat,
+      handId: this.handId,
+      nextHandPending: this.nextHandPending,
       players: this.players.map((p) => ({ ...p })),
     };
     await this.state.storage.put('room', snapshot);
@@ -427,6 +431,7 @@ export class GameRoom {
       honba: this.honba,
       riichiSticks: this.riichiSticks,
       dealerSeat: this.dealerSeat,
+      handId: this.handId,
       currentTurnSeat: this.currentTurnSeat,
       doraIndicators: this.doraIndicators,
       wallRemaining: this.wall.length,
@@ -533,6 +538,9 @@ export class GameRoom {
       case 'tsumoWin':
         this.handleTsumoWin(seat);
         break;
+      case 'previewDiscard':
+        this.handlePreviewDiscard(seat, msg.tileId);
+        break;
       default:
         break;
     }
@@ -542,7 +550,13 @@ export class GameRoom {
     if (this.phase !== 'waiting') return;
     if (this.players.length !== this.rules.playerCount) return;
     if (!this.players.every((p) => p.ready)) return;
-    this.startHand(true);
+    if (this.nextHandPending) {
+      // 局が終わった後の再開: 親・局・供託は endHandAndAdvance で進め済みなので引き継ぐ
+      this.nextHandPending = false;
+      this.startHand(false);
+    } else {
+      this.startHand(true);
+    }
   }
 
   // ---------------- CPU ----------------
@@ -693,6 +707,7 @@ export class GameRoom {
   // ---------------- 対局進行 ----------------
 
   startHand(isFirstOfMatch: boolean) {
+    this.handId += 1;
     this.phase = 'dealing';
 
     // 局の開始ごとに辞書を読み直す(D1の単語の追加・変更を実戦に反映する)。
@@ -772,6 +787,48 @@ export class GameRoom {
     return c;
   }
 
+  // 裏ドラの枚数。リーチした人の和了のときにだけ数える。
+  countUraDora(hand: Tile[], melds: Meld[]): number {
+    const ura = new Set(this.uraDoraIndicators.map(nextForDora));
+    let c = 0;
+    for (const t of hand) if (ura.has(t.kind)) c++;
+    for (const m of melds) for (const t of m.tiles) if (ura.has(t.kind)) c++;
+    return c;
+  }
+
+  // 指定した牌を捨てた場合の待ち・残り枚数・フリテンを、自分の席だけに返す。
+  // 残り枚数 = 最初の枚数 - 捨てた後の自分の手牌の枚数 - 川(全員の捨て牌+今捨てる牌)の枚数。
+  handlePreviewDiscard(seat: number, tileId: string) {
+    const p = this.players[seat];
+    if (!p || this.phase !== 'playing') return;
+    let idx = p.hand.findIndex((x) => x.id === tileId);
+    if (idx === -1) idx = p.hand.findIndex((x) => x.kind === tileId);
+    if (idx === -1) return;
+    const kind = p.hand[idx].kind;
+    const hand14 = p.hand.map((x) => x.kind);
+    const hand13 = [...hand14];
+    hand13.splice(hand13.indexOf(kind), 1);
+    const waits = hand13.length === 13 ? findWaits(hand13, this.wordDict) : [];
+    const rivers: string[] = [];
+    for (const pl of this.players) for (const d of pl.discards) rivers.push(d.kind);
+    rivers.push(kind); // 今捨てる牌も川に出る
+    const ownDiscards = new Set([...p.discards.map((d) => d.kind), kind]);
+    const furiten = waits.some((w) => ownDiscards.has(w));
+    const total = this.rules.tileCountPerKind;
+    const waitsWithRemaining = waits.map((w) => ({
+      kind: w,
+      remaining: Math.max(0, total - hand13.filter((k) => k === w).length - rivers.filter((k) => k === w).length),
+    }));
+    this.send(seat, {
+      type: 'discardPreview',
+      tileId,
+      kind,
+      waits: waitsWithRemaining,
+      furiten,
+      canRiichi: this.computeRiichiDiscards(seat).includes(kind),
+    });
+  }
+
   checkOwnTsumoPossible(seat: number) {
     if (this.computeCanTsumo(seat)) {
       this.send(seat, { type: 'canTsumo', possible: true, seat });
@@ -807,6 +864,14 @@ export class GameRoom {
       // リーチ棒(1000点)を供託に出す(持ち点が1000未満の人は computeRiichiDiscards で弾かれる)
       p.score -= 1000;
       this.riichiSticks += 1;
+    }
+    // リーチした後は、引いた牌(ツモ牌)しか切れない。ツモ牌が分からない場合(復旧直後など)は制限しない。
+    if (p.riichi && this.turnDrawnTile && p.hand[idx].id !== this.turnDrawnTile.id) {
+      this.send(seat, {
+        type: 'notice',
+        message: 'リーチした後は、引いた牌しか切れません。',
+      });
+      return;
     }
     const [tile] = p.hand.splice(idx, 1);
     p.discards.push(tile);
@@ -879,6 +944,8 @@ export class GameRoom {
     for (let i = 1; i < n; i++) {
       const seat = (discarderSeat + i) % n;
       const p = this.players[seat];
+      // リーチした人は鳴けない
+      if (p.riichi) continue;
       const cands = findCallCandidates(p.hand.map((t) => t.kind), tile.kind, this.wordDict);
       if (cands.length > 0) candidatesBySeat[seat] = cands;
     }
@@ -905,6 +972,8 @@ export class GameRoom {
     const pend = this.pending;
     if (!(seat in pend.candidatesBySeat) || pend.decided.has(seat)) return;
     pend.decided.add(seat);
+    // リーチした人は鳴けない(念のためのガード。回答済みとしては扱い、進行が止まらないようにする)
+    if (this.players[seat]?.riichi) accept = false;
     if (accept && word) {
       const cand = pend.candidatesBySeat[seat].find((c) => c.word === word);
       if (cand) {
@@ -966,6 +1035,17 @@ export class GameRoom {
       from: pend.discarderSeat,
     });
 
+    // 鳴きの告知(画面に帯を出す)
+    this.broadcastRaw({
+      type: 'announce',
+      kind: 'call',
+      seat: winnerSeat,
+      username: caller.username,
+      word: winnerCand.word,
+      han: winnerCand.han,
+      isKan: winnerCand.word.length >= 5,
+    });
+
     // 鳴きが入ったので一発は消える
     for (const pl of this.players) {
       pl.ippatsuActive = false;
@@ -990,13 +1070,10 @@ export class GameRoom {
         return;
       }
 
-      // カン成立時に新しいドラ表示牌をめくる。
-      // 1回目: deadWall[4]
-      // 2回目: deadWall[6]
-      // 3回目: deadWall[8]
-      // 4回目: deadWall[10]
-      // したがって裏ドラ側は [5,7,9,11,13]
-      const doraIndex = 4 + (this.kanCount - 1) * 2;
+      // カン成立時に新しいドラ表示牌をめくる。deadWall[4] は最初の表示牌なので、
+      // カンでめくるのは 1回目: [6]、2回目: [8]、3回目: [10]、4回目: [12]。
+      // したがって裏ドラ側は [7,9,11,13]。
+      const doraIndex = 6 + (this.kanCount - 1) * 2;
       const uraIndex = doraIndex + 1;
 
       if (
@@ -1096,14 +1173,59 @@ export class GameRoom {
     return best;
   }
 
+  // 結果画面用の共通データ
+  doraDisplayTiles(): (string | null)[] {
+    return [4, 6, 8, 10, 12].map((i) => this.deadWall[i]?.kind ?? null);
+  }
+
+  uraDisplayTiles(): (string | null)[] {
+    return [5, 7, 9, 11, 13].map((i) => this.deadWall[i]?.kind ?? null);
+  }
+
+  scoreChangesFrom(before: number[]): { seat: number; username: string; before: number; after: number }[] {
+    return this.players.map((pl, i) => ({ seat: pl.seat, username: pl.username, before: before[i], after: pl.score }));
+  }
+
+  winnerHandInfo(pl: any, winningTileKind: string | null) {
+    return {
+      hand: pl.hand.map((x: any) => x.kind),
+      melds: pl.melds.map((m: any) => ({ word: m.word, tiles: m.tiles.map((x: any) => x.kind) })),
+      winningTile: winningTileKind,
+    };
+  }
+
+  // この局の終わりで対局が終わるかどうかの判定(精算後・局進行前の状態で使う)。
+  // endHandAndAdvance と同じ結論になること。
+  previewHandEnd(dealerContinues: boolean): { matchOver: boolean; reason: 'complete' | 'tobi'; tobiSeats: number[] } {
+    if (this.rules.tobi !== false) {
+      const tobiSeats = this.players.filter((pl) => pl.score < 0).map((pl) => pl.seat);
+      if (tobiSeats.length > 0) return { matchOver: true, reason: 'tobi', tobiSeats };
+    }
+    const nextRound = dealerContinues ? this.round : this.round + 1;
+    if (this.roundExceedsLimit(nextRound)) return { matchOver: true, reason: 'complete', tobiSeats: [] };
+    return { matchOver: false, reason: 'complete', tobiSeats: [] };
+  }
+
+  roundExceedsLimit(round: number): boolean {
+    switch (this.rules.length) {
+      case 'ichikyoku': return round > 1;
+      case 'tonpuu': return round > 4;   // 東1〜東4
+      case 'hanchan': return round > 8;  // 東1〜南4 相当(簡易)
+      case 'honchan': return round > 16; // 東南西北 相当(簡易)
+      default: return round > 4;
+    }
+  }
+
   finishHandByTsumo(seat: number, decomps: any[]) {
     const p = this.players[seat];
     const chars = this.handCharsForWinCheck(p);
-    const doraCount = this.countDora(p.hand, p.melds);
     const isDealer = seat === this.dealerSeat;
+    // 裏ドラはリーチした人の和了のときにだけ数える
+    const doraCount = this.countDora(p.hand, p.melds) + (p.riichi ? this.countUraDora(p.hand, p.melds) : 0);
     const best = this.bestDecomposition(chars, doraCount, p.riichi, p.ippatsuActive, isDealer, 'tsumo');
     if (!best) return;
     const { score } = best;
+    const before = this.players.map((pl) => pl.score);
 
     if (isDealer) {
       for (const pl of this.players) if (pl.seat !== seat) pl.score -= score.payments.fromNonDealer!;
@@ -1122,7 +1244,19 @@ export class GameRoom {
     p.score += riichiBonus;
     this.riichiSticks = 0;
 
-    this.broadcastRaw({ type: 'result', kind: 'tsumo', winner: seat, decomp: best.decomp, score, uraDora: p.riichi ? this.uraDoraIndicators.map(nextForDora) : [] });
+    const end = this.previewHandEnd(isDealer);
+    this.broadcastRaw({
+      type: 'result', kind: 'tsumo', winner: seat, decomp: best.decomp, score,
+      uraDora: p.riichi ? this.uraDoraIndicators.map(nextForDora) : [],
+      handInfo: this.winnerHandInfo(p, this.turnDrawnTile?.kind ?? null),
+      winningTile: this.turnDrawnTile?.kind ?? null,
+      winnerRiichi: p.riichi,
+      doraTiles: this.doraDisplayTiles(),
+      uraTiles: this.uraDisplayTiles(),
+      scoreChanges: this.scoreChangesFrom(before),
+      hasNextHand: !end.matchOver,
+      handId: this.handId,
+    });
     this.endHandAndAdvance(isDealer);
   }
 
@@ -1130,17 +1264,25 @@ export class GameRoom {
     // ダブロン・トリロン対応: 全員に対して個別に精算する
     const results: any[] = [];
     let dealerWon = false;
+    const before = this.players.map((pl) => pl.score);
     for (const seat of ronSeats) {
       const p = this.players[seat];
       const chars = [...this.handCharsForWinCheck(p), tile.kind];
       const isDealer = seat === this.dealerSeat;
-      const doraCount = this.countDora([...p.hand, tile], p.melds);
+      // 裏ドラはリーチした人の和了のときにだけ数える
+      const doraCount = this.countDora([...p.hand, tile], p.melds) + (p.riichi ? this.countUraDora([...p.hand, tile], p.melds) : 0);
       const best = this.bestDecomposition(chars, doraCount, p.riichi, p.ippatsuActive, isDealer, 'ron');
       if (!best) continue;
       if (isDealer) dealerWon = true;
       this.players[discarderSeat].score -= best.score.payments.total;
       p.score += best.score.payments.total;
-      results.push({ winner: seat, decomp: best.decomp, score: best.score, uraDora: p.riichi ? this.uraDoraIndicators.map(nextForDora) : [] });
+      results.push({
+        winner: seat, decomp: best.decomp, score: best.score,
+        uraDora: p.riichi ? this.uraDoraIndicators.map(nextForDora) : [],
+        handInfo: this.winnerHandInfo(p, tile.kind),
+        winningTile: tile.kind,
+        winnerRiichi: p.riichi,
+      });
     }
     // 供託のリーチ棒は、和了した人(ダブロンなら放銃者に最も近い人=先頭)が総取りする
     if (results.length > 0) {
@@ -1149,40 +1291,70 @@ export class GameRoom {
       this.riichiSticks = 0;
     }
 
-    this.broadcastRaw({ type: 'result', kind: 'ron', discarder: discarderSeat, results });
+    const end = this.previewHandEnd(dealerWon);
+    this.broadcastRaw({
+      type: 'result', kind: 'ron', discarder: discarderSeat, results,
+      doraTiles: this.doraDisplayTiles(),
+      uraTiles: this.uraDisplayTiles(),
+      scoreChanges: this.scoreChangesFrom(before),
+      hasNextHand: !end.matchOver,
+      handId: this.handId,
+    });
     this.endHandAndAdvance(dealerWon);
   }
 
   exhaustiveDraw(reason: string) {
-    // 簡易実装: テンパイ/ノーテン判定は省略し、親のみ連荘扱いとする拡張余地あり
-    this.broadcastRaw({ type: 'result', kind: 'draw', reason });
+    // 全員のテンパイ/ノーテンと手牌を結果画面に出す
+    const before = this.players.map((pl) => pl.score);
+    const players = this.players.map((pl) => {
+      const chars = this.handCharsForWinCheck(pl);
+      let waits: string[] = [];
+      let tenpai = false;
+      if (chars.length === 13) {
+        waits = findWaits(chars, this.wordDict);
+        tenpai = waits.length > 0;
+      } else if (chars.length === 14) {
+        const rd = findRiichiDiscards(chars, this.wordDict);
+        waits = [...new Set(rd.flatMap((d) => d.waits))];
+        tenpai = rd.length > 0;
+      }
+      return {
+        seat: pl.seat,
+        username: pl.username,
+        hand: pl.hand.map((x) => x.kind),
+        melds: pl.melds.map((m) => ({ word: m.word, tiles: m.tiles.map((x) => x.kind) })),
+        tenpai,
+        waits,
+      };
+    });
+    const end = this.previewHandEnd(true);
+    this.broadcastRaw({
+      type: 'result', kind: 'draw', reason, players,
+      scoreChanges: this.scoreChangesFrom(before),
+      hasNextHand: !end.matchOver,
+      handId: this.handId,
+    });
     this.endHandAndAdvance(true);
   }
 
   endHandAndAdvance(dealerContinues: boolean) {
-    // 飛び: 持ち点がマイナス(0点ちょうどは飛ばない)になった人がいれば、局数に関わらず対局終了。
-    // tobi が未設定の古い部屋は、デフォルトの「あり」として扱う。
-    if (this.rules.tobi !== false) {
-      const tobiSeats = this.players.filter((p) => p.score < 0).map((p) => p.seat);
-      if (tobiSeats.length > 0) {
-        this.finishMatch('tobi', tobiSeats);
-        return;
-      }
+    const end = this.previewHandEnd(dealerContinues);
+    if (end.matchOver) {
+      this.finishMatch(end.reason, end.tobiSeats);
+      return;
     }
     this.honba = dealerContinues ? this.honba + 1 : 0;
     if (!dealerContinues) {
       this.round += 1;
       this.dealerSeat = (this.dealerSeat + 1) % this.rules.playerCount;
     }
-    if (this.isMatchOver()) {
-      this.finishMatch('complete');
-      return;
-    }
-    for (const p of this.players) p.ready = false;
+    // 次局は自動では始まらない。全員が「次局への準備OK」を押したら maybeStart で始まる。
+    // CPU は自動で準備OK扱いにする。
+    for (const p of this.players) p.ready = !!p.isCpu;
     this.phase = 'waiting';
+    this.nextHandPending = true;
     this.broadcastState();
-    // 実運用では次局開始も全員準備OKで開始する想定。ここでは自動継続する。
-    this.startHand(false);
+    this.persist();
   }
 
   finishMatch(reason: 'complete' | 'tobi', tobiSeats: number[] = []) {
@@ -1197,13 +1369,6 @@ export class GameRoom {
   }
 
   isMatchOver(): boolean {
-    const roundsPerWind = 1; // 東/南 それぞれ何局か(1局固定の簡易実装。必要に応じ拡張)
-    switch (this.rules.length) {
-      case 'ichikyoku': return this.round > 1;
-      case 'tonpuu': return this.round > 4;   // 東1〜東4
-      case 'hanchan': return this.round > 8;  // 東1〜南4 相当(簡易)
-      case 'honchan': return this.round > 16; // 東南西北 相当(簡易)
-      default: return this.round > 4;
-    }
+    return this.roundExceedsLimit(this.round);
   }
 }

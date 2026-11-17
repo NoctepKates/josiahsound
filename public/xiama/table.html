@@ -120,6 +120,8 @@
 
 <!-- 自分の手牌: 卓の遠近法の射影から切り離した平面表示。位置だけ卓の手前中央(selfHandAnchor)に合わせる -->
 <div class="self-hand-layer" id="selfHandLayer">
+  <!-- リーチ時の待ちプレビュー: 選んだ牌を切った場合の待ちと残り枚数 -->
+  <div id="waitPreview" class="wait-preview hidden"></div>
   <!-- リーチ・ツモのボタン: 自分の手牌の少し上に出す -->
   <div class="action-bar" id="actionBar"></div>
   <div class="seat bottom" id="seat-self">
@@ -128,14 +130,8 @@
 </div>
 
 
-<!-- 鳴き選択 -->
-<div class="modal-overlay hidden" id="callModal">
-  <div class="panel modal" style="text-align:center;">
-    <h3>鳴きますか？</h3>
-    <div id="callCandidates" style="display:flex; flex-direction:column; gap:8px; margin:14px 0;"></div>
-    <button class="btn" onclick="respondCall(false)">スルー</button>
-  </div>
-</div>
+<!-- 鳴き・ツモ・ロンの帯 -->
+<div id="announceBanner" class="announce-banner hidden"></div>
 
 <!-- 結果表示 -->
 <div class="result-overlay hidden" id="resultOverlay">
