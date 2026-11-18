@@ -21,6 +21,12 @@ let previewTileId = null;
 let lastTurnKey = null;
 let autoTsumogiriKey = null; // 自動ツモ切り済みの印(局ID:ツモ牌ID)
 
+// 左端の自動操作パネル。初期状態は全部オフ。
+const autoFlags = { sort: false, win: false, skipCall: false, cut: false };
+let autoWinKey = null; // 自動和了済みの印(局ID:ツモ牌ID)
+let autoCutKey = null; // 自動ツモ切り済みの印(局ID:ツモ牌ID)
+let autoCutTimer = null;
+
 // 鳴きパネル・結果画面の状態
 let callPanelOpen = false;
 let currentCallPrompt = null;
@@ -57,6 +63,8 @@ const SEVEN_SEG = {
 };
 
 async function init() {
+  initAutoPanel();
+
   if (!code || !/^\d{4}$/.test(code)) {
     alert('部屋番号が指定されていません。ホームから部屋を作成/参加してください。');
     location.replace('/xiama/home');
@@ -85,6 +93,50 @@ async function init() {
   connect();
 }
 
+// 左端の自動操作パネルの配線。開閉は .expanded の付け外しだけで、
+// 1文字/説明文の切り替えは CSS が行う。
+function initAutoPanel() {
+  const panel = document.getElementById('autoPanel');
+  if (!panel) return;
+
+  panel.querySelectorAll('.auto-toggle').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const key = btn.dataset.auto;
+      autoFlags[key] = !autoFlags[key];
+      btn.classList.toggle('active', autoFlags[key]);
+
+      if (key === 'sort' && autoFlags.sort) {
+        // すぐ並び替えて画面に反映する
+        applyAutoSort();
+        renderHandOnly();
+      }
+      if (key === 'win' && autoFlags.win) {
+        // すでにツモれる状態なら、すぐあがる
+        maybeAutoWin(state);
+      }
+      if (key === 'skipCall' && autoFlags.skipCall) {
+        // 表示中の鳴きプロンプトがあれば、すぐスキップする
+        if (promptQueue.length > 0) showNextPrompt();
+      }
+      if (key === 'cut') {
+        if (autoFlags.cut) {
+          // すでに自分の番なら、すぐ自動ツモ切りの予約をする
+          maybeAutoCut(state);
+        } else {
+          cancelAutoCut();
+        }
+      }
+    });
+  });
+
+  const toggle = document.getElementById('autoPanelToggle');
+  if (toggle) {
+    toggle.addEventListener('click', () => {
+      panel.classList.toggle('expanded');
+    });
+  }
+}
+
 function connect() {
   const proto = location.protocol === 'https:' ? 'wss' : 'ws';
 
@@ -108,6 +160,7 @@ function connect() {
       showCallPrompt(msg.tile, msg.candidates, msg.seat);
     } else if (msg.type === 'canTsumo') {
       canTsumoNow = msg.possible;
+      maybeAutoWin(state);
       renderActionBar();
     } else if (msg.type === 'discardPreview') {
       if (msg.tileId === previewTileId) {
@@ -195,6 +248,52 @@ function reconcileHandOrder(newTiles) {
   );
 
   handOrder = [...kept, ...remaining];
+}
+
+// 50音順。濁音・半濁音は元の行の直後、小さい文字と長音は最後に置く。
+const GOJUUON_ORDER = [
+  ...'あいうえお',
+  ...'かきくけこ', ...'がぎぐげご',
+  ...'さしすせそ', ...'ざじずぜぞ',
+  ...'たちつてと', ...'だぢづでど',
+  ...'なにぬねの',
+  ...'はひふへほ', ...'ばびぶべぼ', ...'ぱぴぷぺぽ', 'ゔ',
+  ...'まみむめも',
+  ...'やゆよ',
+  ...'らりるれろ',
+  ...'わをん',
+  ...'ぁぃぅぇぉっゃゅょ',
+  'ー',
+];
+const gojuuonIndex = new Map(GOJUUON_ORDER.map((k, i) => [k, i]));
+
+// 「理」がオンのとき、手牌を50音順に並び替える。
+// ツモ牌は並び替えの対象外で、今の位置のままにする
+// (render() 側の moveDrawnTileToEnd が、普段通り右端へ置く)。
+function applyAutoSort() {
+  if (!autoFlags.sort) return;
+
+  const drawnId = state?.yourDrawnTile?.id ?? null;
+  const drawnIdx = drawnId
+    ? handOrder.findIndex((t) => t.id === drawnId)
+    : -1;
+
+  const rest = handOrder
+    .filter((t) => t.id !== drawnId)
+    .sort((a, b) =>
+      (gojuuonIndex.get(a.kind) ?? GOJUUON_ORDER.length) -
+      (gojuuonIndex.get(b.kind) ?? GOJUUON_ORDER.length)
+    );
+
+  if (drawnIdx !== -1) {
+    rest.splice(
+      Math.min(drawnIdx, rest.length),
+      0,
+      handOrder[drawnIdx]
+    );
+  }
+
+  handOrder = rest;
 }
 
 
@@ -393,6 +492,7 @@ function render(s) {
 
   if (my !== -1) {
     reconcileHandOrder([...s.yourHand]);
+    applyAutoSort();
   }
 
   const activeDivKeys =
@@ -597,6 +697,8 @@ function render(s) {
   renderDevWall(s);
   positionSelfHand();
   maybeAutoTsumogiri(s);
+  maybeAutoWin(s);
+  maybeAutoCut(s);
 }
 
 /*
@@ -1041,6 +1143,8 @@ function renderHandOnly() {
   const handEl = document.getElementById('hand-self');
   if (!handEl) return;
 
+  applyAutoSort();
+
   const myRiichi = state?.yourSeat !== -1 && state?.players[state.yourSeat]?.riichi === true;
 
   if (setHtmlIfChanged(handEl, 'hand-self', selfHandTilesHtml(myRiichi))) {
@@ -1317,6 +1421,86 @@ function maybeAutoTsumogiri(s) {
   }, 800);
 }
 
+// 「和」がオンのとき、ツモれればすぐあがる。
+// ロンはプロンプト側(showRonPromptInner)で自動回答する。
+function maybeAutoWin(s) {
+  if (!autoFlags.win) return;
+  if (!s || s.phase !== 'playing') return;
+  if (!canTsumoNow) return;
+  if (s.awaitingDecisions) return;
+  if (promptQueue.length > 0) return;
+
+  const my = s.yourSeat;
+  if (my === -1 || s.currentTurnSeat !== my) return;
+
+  const drawn = s.yourDrawnTile;
+  if (!drawn) return;
+
+  const key = `${s.handId}:${drawn.id}`;
+  if (autoWinKey === key) return;
+  autoWinKey = key;
+
+  const seenBeforeSend = messagesReceived;
+  ws.send(
+    JSON.stringify({
+      type: 'tsumoWin',
+      seat: my,
+    })
+  );
+  armSyncWatchdog(seenBeforeSend);
+}
+
+// 「切」がオンのとき、自分の番に引いた牌を自動でツモ切りする。
+// リーチ後は既存の自動ツモ切り(maybeAutoTsumogiri)が担当する。
+// あがれる牌は切らない(「和」か自分の判断に任せる)。
+function maybeAutoCut(s) {
+  if (!autoFlags.cut) return;
+  if (!s || s.phase !== 'playing') return;
+  if (s.awaitingDecisions) return;
+  if (promptQueue.length > 0) return;
+  if (riichiMode) return; // リーチ宣言の操作中は邪魔しない
+
+  const my = s.yourSeat;
+  if (my === -1 || s.currentTurnSeat !== my) return;
+
+  const me = s.players[my];
+  if (!me || me.riichi) return;
+  if (canTsumoNow) return;
+
+  const drawn = s.yourDrawnTile;
+  if (!drawn) return;
+
+  const key = `${s.handId}:${drawn.id}`;
+  if (autoCutKey === key) return;
+  autoCutKey = key;
+
+  autoCutTimer = setTimeout(() => {
+    autoCutTimer = null;
+    if (!autoFlags.cut) return;
+    if (!state || state.phase !== 'playing') return;
+    if (state.awaitingDecisions) return;
+    if (state.currentTurnSeat !== state.yourSeat) return;
+    if (!state.players[state.yourSeat] || state.players[state.yourSeat].riichi) return;
+    if (canTsumoNow) return;
+    if (promptQueue.length > 0) return;
+    if (riichiMode) return;
+    if (state.yourDrawnTile?.id !== drawn.id) return;
+    // 別の牌を選んでいたら、そちらの判断を優先する
+    if (selectedTileId && selectedTileId !== drawn.id) return;
+    selectedTileId = drawn.id;
+    doDiscard();
+  }, 800);
+}
+
+function cancelAutoCut() {
+  if (autoCutTimer) {
+    clearTimeout(autoCutTimer);
+    autoCutTimer = null;
+  }
+  // 切り直したときに、同じツモ牌でもまた予約できるようにする
+  autoCutKey = null;
+}
+
 function showRonPrompt(tile, forSeat) {
   enqueuePrompt({ kind: 'ron', tile, seat: forSeat });
 }
@@ -1344,6 +1528,22 @@ function dequeueAndShowNext() {
 }
 
 function showRonPromptInner(tile, forSeat) {
+  // 「自動和了」がオンなら、表示せずすぐロンする
+  if (autoFlags.win) {
+    const seenBeforeSend = messagesReceived;
+    ws.send(
+      JSON.stringify({
+        type: 'ronDecision',
+        accept: true,
+        seat: forSeat !== undefined ? forSeat : state.yourSeat,
+      })
+    );
+    armSyncWatchdog(seenBeforeSend);
+
+    dequeueAndShowNext();
+    return;
+  }
+
   const bar =
     document.getElementById('actionBar');
 
@@ -1413,6 +1613,12 @@ function showCallPromptInner(
   forSeat
 ) {
   currentCallPrompt = { tile, candidates, seat: forSeat };
+
+  // 「鳴き無し」がオンなら、表示せずすぐスキップする
+  if (autoFlags.skipCall) {
+    respondCall(false);
+    return;
+  }
 
   const bar =
     document.getElementById('actionBar');
@@ -1773,7 +1979,8 @@ function winnerCardHtml(w, msg) {
   </div>`;
 }
 
-// 役分解の1行。単語は牌で表示し、それぞれの翻数も出す。
+// 役分解の1行。役の名前は常に普通の文字で表示する
+// (漢字が入ることもあるため、牌を並べて表示しない)。
 function breakdownRowHtml(b, decomp) {
   const isWord =
     decomp &&
@@ -1781,9 +1988,7 @@ function breakdownRowHtml(b, decomp) {
     decomp.words.includes(b.label);
 
   const labelHtml = isWord
-    ? `<span class="breakdown-word">${[...b.label]
-        .map((ch) => tileHtml(ch, false, false, true))
-        .join('')}</span>`
+    ? `<span class="breakdown-word">${escapeHtmlText(b.label)}</span>`
     : `<span class="breakdown-label">${escapeHtmlText(b.label)}</span>`;
 
   const hanText = b.han === 'y' ? '役満' : `${b.han}翻`;

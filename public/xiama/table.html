@@ -57,6 +57,15 @@
   </div>
 </div>
 
+<!-- 画面左端の自動操作パネル。初期状態は全部オフ。 -->
+<div class="auto-panel" id="autoPanel">
+  <button class="auto-toggle" data-auto="sort" type="button"><span class="lbl-short">理</span><span class="lbl-long">手牌の自動整理</span></button>
+  <button class="auto-toggle" data-auto="win" type="button"><span class="lbl-short">和</span><span class="lbl-long">自動和了</span></button>
+  <button class="auto-toggle" data-auto="skipCall" type="button"><span class="lbl-short">鳴</span><span class="lbl-long">鳴き無し</span></button>
+  <button class="auto-toggle" data-auto="cut" type="button"><span class="lbl-short">切</span><span class="lbl-long">自動ツモ切り</span></button>
+  <button class="auto-panel-toggle" id="autoPanelToggle" type="button"><span class="lbl-short">→</span><span class="lbl-long">←</span></button>
+</div>
+
 <!-- 開発者モード: 山確認 -->
 <div class="modal-overlay hidden" id="wallModal">
   <div class="panel modal dev-wall-modal">

@@ -2359,6 +2359,96 @@ body {
    結果画面(あがり詳細・流局・点数の移動)
    ========================================================= */
 
+/* =========================================================
+   画面左端の自動操作パネル
+   ========================================================= */
+
+.auto-panel {
+  position: fixed;
+  left: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 65;
+
+  box-sizing: border-box;
+  width: 46px;
+  padding: 8px 6px;
+
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+
+  overflow: hidden;
+
+  background: rgba(0,0,0,.3);
+  border: 1px solid rgba(217,180,106,.35);
+  border-radius: 10px;
+  box-shadow:
+    0 4px 10px rgba(0,0,0,.28),
+    inset 0 1px 0 rgba(255,255,255,.05);
+
+  transition: width .18s ease;
+}
+
+.auto-panel.expanded {
+  width: 176px;
+}
+
+.auto-toggle,
+.auto-panel-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  width: 100%;
+  box-sizing: border-box;
+  padding: 9px 4px;
+
+  white-space: nowrap;
+
+  border: 1px solid var(--gold, #d9b46a);
+  border-radius: 8px;
+  background: linear-gradient(180deg, #2a3752, #17223a);
+  box-shadow: 0 2px 6px rgba(0,0,0,.4);
+
+  color: var(--gold-bright, #f3d78a);
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+
+  cursor: pointer;
+}
+
+/* オフのときは控えめに、オンのときは金色に光らせる */
+.auto-toggle {
+  opacity: .55;
+}
+
+.auto-toggle.active {
+  opacity: 1;
+  background: linear-gradient(180deg, var(--gold-bright, #f3d78a), var(--gold, #d9b46a));
+  border-color: var(--gold-bright, #f3d78a);
+  color: #1b2740;
+  box-shadow: 0 0 10px rgba(243,215,138,.45);
+}
+
+/* 閉じているときは1文字、開いているときは説明文を出す */
+.auto-panel .lbl-long {
+  display: none;
+}
+
+.auto-panel.expanded .lbl-long {
+  display: inline;
+}
+
+.auto-panel.expanded .lbl-short {
+  display: none;
+}
+
+/* =========================================================
+   結果表示
+   ========================================================= */
+
 .result-overlay {
   position: fixed;
   inset: 0;
@@ -2455,9 +2545,11 @@ body {
   gap: 12px;
 }
 
+/* 役の名前は普通の文字で表示する(漢字が入ることもあるため牌では並べない) */
 .breakdown-word {
-  display: flex;
-  gap: 2px;
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: 2px;
 }
 
 .breakdown-label {
