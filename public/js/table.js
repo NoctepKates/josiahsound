@@ -113,6 +113,9 @@ function initAutoPanel() {
       if (key === 'win' && autoFlags.win) {
         // すでにツモれる状態なら、すぐあがる
         maybeAutoWin(state);
+        // 表示中のロンプロンプトがあれば、すぐロンする
+        // (次のstateを待たずに、その場で回答する)
+        if (promptQueue.length > 0) showNextPrompt();
       }
       if (key === 'skipCall' && autoFlags.skipCall) {
         // 表示中の鳴きプロンプトがあれば、すぐスキップする
@@ -120,6 +123,16 @@ function initAutoPanel() {
       }
       if (key === 'cut') {
         if (autoFlags.cut) {
+          // 切り替え前に選んでいた牌が残っていると自動ツモ切りが止まるので、
+          // リーチ宣言中でなければ選択を外してから予約する。
+          // (オンにした後に選び直した牌は、従来通りそちらを優先する)
+          if (!riichiMode) {
+            selectedTileId = null;
+            previewData = null;
+            previewTileId = null;
+            renderHandOnly();
+            renderWaitPreview();
+          }
           // すでに自分の番なら、すぐ自動ツモ切りの予約をする
           maybeAutoCut(state);
         } else {
