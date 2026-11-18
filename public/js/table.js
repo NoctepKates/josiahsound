@@ -1166,18 +1166,13 @@ function doDiscard() {
   if (state.awaitingDecisions) return;
   if (actionAwaitingReply) return;
 
-  // リーチ宣言中は、切ればテンパイになる牌だけ切れる(サーバーが送る riichiDiscards)
+  // リーチ宣言中は、切ればテンパイになる牌だけ切れる(サーバーが送る riichiDiscards)。
+  // 切れない牌は黙って受け付けない(理由は待ちプレビューに表示済み)。アラートは出さない。
   if (riichiMode) {
     const picked = handOrder.find((t) => t.id === selectedTileId);
     const allowed = state.riichiDiscards || [];
 
     if (picked && !allowed.includes(picked.kind)) {
-      alert(
-        'その牌を切ってもテンパイにならないため、リーチできません。\n' +
-        (allowed.length
-          ? `リーチできる打牌: ${allowed.join('　')}`
-          : '')
-      );
       return;
     }
   }

@@ -904,6 +904,8 @@ export class GameRoom {
         type: 'notice',
         message: 'ロン・鳴きの確認中です。',
       });
+      // 却下された側の画面をすぐ直す(楽観的に消した打牌を戻す)
+      this.broadcastState();
       return;
     }
     const p = this.players[seat];
@@ -911,7 +913,11 @@ export class GameRoom {
     let idx = p.hand.findIndex((t) => t.id === tileId);
     if (idx === -1) idx = p.hand.findIndex((t) => t.kind === tileId);
     if (idx === -1) return;
-    if (riichiDeclare) {
+    // 宣言する打牌そのものは、リーチ後の制限(ツモ牌しか切れない)の対象外。
+    // 宣言前にリーチしていたかどうかを先に覚えておかないと、
+    // 今セットしたリーチに引っかかって宣言打牌が却下されてしまう。
+    const wasRiichi = p.riichi;
+    if (riichiDeclare && !wasRiichi) {
       // リーチ宣言できるのは、切ればテンパイになる牌だけ。
       // (以前は判定せずに宣言できてしまっていた)
       if (!this.computeRiichiDiscards(seat).includes(p.hand[idx].kind)) {
@@ -919,6 +925,7 @@ export class GameRoom {
           type: 'notice',
           message: 'その牌を切ってもテンパイにならないため、リーチできません。',
         });
+        this.broadcastState();
         return;
       }
       p.riichi = true;
@@ -928,11 +935,12 @@ export class GameRoom {
       this.riichiSticks += 1;
     }
     // リーチした後は、引いた牌(ツモ牌)しか切れない。ツモ牌が分からない場合(復旧直後など)は制限しない。
-    if (p.riichi && this.turnDrawnTile && p.hand[idx].id !== this.turnDrawnTile.id) {
+    if (wasRiichi && this.turnDrawnTile && p.hand[idx].id !== this.turnDrawnTile.id) {
       this.send(seat, {
         type: 'notice',
         message: 'リーチした後は、引いた牌しか切れません。',
       });
+      this.broadcastState();
       return;
     }
     const [tile] = p.hand.splice(idx, 1);
