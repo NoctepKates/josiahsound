@@ -5,6 +5,12 @@ let selectedTileId = null;
 let riichiMode = false;
 let canTsumoNow = false;
 let reconnectAttempts = 0;
+// サーバーからのメッセージ総数。行動を送ったあと何も返ってこない場合の検出に使う。
+let messagesReceived = 0;
+// 打牌を送ってから、サーバーからの返信(state等)が届くまでの間だけtrue。
+// この間は手牌をクリックしても打てない(返信が止まった状態で連打すると、
+// 何ターン分も捨ててしまうため)。
+let actionAwaitingReply = false;
 let dragFromIdx = null;
 let devGodView = true; // 開発者モード: 他プレイヤーの手牌も見えるようにするか
 let devWallVisible = false;
@@ -88,6 +94,9 @@ function connect() {
 
   ws.onmessage = (ev) => {
     reconnectAttempts = 0;
+    messagesReceived += 1;
+    // 何かしら返信が届いた=サーバーは生きているので、打牌の確認待ちを解除する
+    actionAwaitingReply = false;
 
     const msg = JSON.parse(ev.data);
 
@@ -133,6 +142,22 @@ function connect() {
 
     setTimeout(connect, 2000);
   };
+}
+
+// 行動を送ったのにサーバーから何も返ってこない状態を検出して、再接続する。
+// (stateが届かなくなると、打った牌が画面に残ったままになり、
+//  「おかしいな」と連打すると何ターン分も捨ててしまうため)
+// seenBeforeSend は送信直前に数えたメッセージ総数。送信と同時に返信が届く
+// 場合でも、その返信を「応答あり」として正しく数えるため、呼ぶ側で取る。
+function armSyncWatchdog(seenBeforeSend) {
+  const socketAtSend = ws;
+  setTimeout(() => {
+    if (ws !== socketAtSend) return;
+    if (messagesReceived !== seenBeforeSend) return;
+    if (!ws || ws.readyState !== WebSocket.OPEN) return;
+    console.warn('サーバーからの応答が無いため再接続します');
+    ws.close();
+  }, 3000);
 }
 
 // ツモ牌(手番で引いた牌)を、手牌の並びの一番右に移す。
@@ -803,6 +828,8 @@ function attachHandHandlers(handEl) {
     // ロン・鳴きの確認中は打牌できない(確認中に切れると進行が壊れる)。
     // 確認する側はアクションバーのボタンで回答する。
     if (state?.awaitingDecisions) return;
+    // 打牌の返信待ちの間も打てない(返信が止まった状態での連打を防ぐ)。
+    if (actionAwaitingReply) return;
 
     const wraps = [
       ...handEl.querySelectorAll('.tile-wrap')
@@ -1019,6 +1046,7 @@ function doDiscard() {
   if (!selectedTileId) return;
   if (!state) return;
   if (state.awaitingDecisions) return;
+  if (actionAwaitingReply) return;
 
   // リーチ宣言中は、切ればテンパイになる牌だけ切れる(サーバーが送る riichiDiscards)
   if (riichiMode) {
@@ -1036,6 +1064,7 @@ function doDiscard() {
     }
   }
 
+  const seenBeforeSend = messagesReceived;
   ws.send(
     JSON.stringify({
       type: 'discard',
@@ -1044,11 +1073,18 @@ function doDiscard() {
       seat: state.yourSeat,
     })
   );
+  armSyncWatchdog(seenBeforeSend);
+  actionAwaitingReply = true;
 
+  // 楽観的に手牌から消す。stateの到着が遅れても画面はすぐ変わる。
+  // サーバーが打牌を拒否した場合は、次のstateで牌が手牌に戻る。
+  const discardedId = selectedTileId;
+  handOrder = handOrder.filter((t) => t.id !== discardedId);
   selectedTileId = null;
   riichiMode = false;
   previewData = null;
   previewTileId = null;
+  renderHandOnly();
   renderWaitPreview();
 }
 
@@ -1318,6 +1354,7 @@ function showRonPromptInner(tile, forSeat) {
   yes.textContent = 'ロン';
 
   yes.onclick = () => {
+    const seenBeforeSend = messagesReceived;
     ws.send(
       JSON.stringify({
         type: 'ronDecision',
@@ -1325,6 +1362,7 @@ function showRonPromptInner(tile, forSeat) {
         seat: forSeat !== undefined ? forSeat : state.yourSeat,
       })
     );
+    armSyncWatchdog(seenBeforeSend);
 
     dequeueAndShowNext();
   };
@@ -1336,6 +1374,7 @@ function showRonPromptInner(tile, forSeat) {
   no.textContent = 'スルー';
 
   no.onclick = () => {
+    const seenBeforeSend = messagesReceived;
     ws.send(
       JSON.stringify({
         type: 'ronDecision',
@@ -1343,6 +1382,7 @@ function showRonPromptInner(tile, forSeat) {
         seat: forSeat !== undefined ? forSeat : state.yourSeat,
       })
     );
+    armSyncWatchdog(seenBeforeSend);
 
     dequeueAndShowNext();
   };
@@ -1450,6 +1490,7 @@ function respondCall(
       ? prompt.seat
       : state.yourSeat;
 
+  const seenBeforeSend = messagesReceived;
   ws.send(
     JSON.stringify({
       type: 'callDecision',
@@ -1458,6 +1499,7 @@ function respondCall(
       seat,
     })
   );
+  armSyncWatchdog(seenBeforeSend);
 
   callPanelOpen = false;
   currentCallPrompt = null;
@@ -1856,6 +1898,7 @@ function sendReadyForNextHand() {
     btn.textContent = '他のプレイヤーを待っています…';
   }
 
+  const seenBeforeSend = messagesReceived;
   // 開発者モードで複数席を持っている場合は、全席まとめて準備OKにする
   if (
     state?.devMode &&
@@ -1871,6 +1914,7 @@ function sendReadyForNextHand() {
       })
     );
   }
+  armSyncWatchdog(seenBeforeSend);
 }
 
 function showMatchEnd(msg) {

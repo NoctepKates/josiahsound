@@ -68,7 +68,9 @@ const DEFAULT_RULES: RoomRules = {
 export class GameRoom {
   state: DurableObjectState;
   env: any;
-  sockets: Map<number, WebSocket> = new Map(); // seat -> ws
+  // seat -> その席の接続ぜんぶ。同じ席に複数タブ/再接続が重なっても、
+  // 古い接続を追い出さず全てにstateを送る(片方だけ止まる不具合を防ぐ)。
+  sockets: Map<number, Set<WebSocket>> = new Map();
   spectatorSockets: Set<WebSocket> = new Set();
 
   roomNumber = '';
@@ -310,13 +312,19 @@ export class GameRoom {
     } else {
       for (const seat of mySeats) {
         this.players[seat].connected = true;
-        this.sockets.set(seat, ws);
+        if (!this.sockets.has(seat)) this.sockets.set(seat, new Set());
+        this.sockets.get(seat)!.add(ws);
       }
     }
 
     ws.addEventListener('message', (ev: MessageEvent) => {
+      let msg: any;
       try {
-        const msg = JSON.parse(ev.data as string);
+        msg = JSON.parse(ev.data as string);
+      } catch {
+        return; // ignore malformed
+      }
+      try {
         // 開発者モード: 自分が持つ全ての席を一括で準備OKにする
         if (msg.type === 'devReadyAll' && mySeats.length > 1) {
           for (const s of mySeats) this.players[s].ready = true;
@@ -329,33 +337,74 @@ export class GameRoom {
         const actingSeat = (typeof msg.seat === 'number' && mySeats.includes(msg.seat)) ? msg.seat : mySeats[0];
         this.onMessage(actingSeat, msg);
       } catch (e) {
-        // ignore malformed
+        // 処理中のエラーは握り潰さない(ログに残す)。握り潰すと打牌だけ進んで
+        // 進行が止まる不具合の原因が分からなくなる。
+        console.error('メッセージ処理失敗:', e);
       }
     });
     ws.addEventListener('close', () => {
-      if (mySeats.length > 0) {
-        for (const s of mySeats) {
-          this.players[s].connected = false;
-          this.sockets.delete(s);
-        }
-      } else {
-        this.spectatorSockets.delete(ws);
-      }
+      this.dropSocket(ws);
       this.broadcastState();
     });
+
+    // 確認待ちの最中に(再)接続してきた席には、プロンプトを送り直す。
+    // 送り直さないと、回答できずに対局が止まってしまう。
+    const pending = this.pending;
+    if (pending) {
+      for (const seat of mySeats) {
+        if (pending.decided.has(seat)) continue;
+        if (pending.kind === 'ron') {
+          if (!pending.eligibleSeats.includes(seat)) continue;
+          this.safeSend(ws, JSON.stringify({ type: 'ronPrompt', tile: pending.tile.kind, seat }));
+        } else {
+          const candidates = pending.candidatesBySeat[seat];
+          if (!candidates) continue;
+          this.safeSend(ws, JSON.stringify({ type: 'callPrompt', tile: pending.tile.kind, candidates, seat }));
+        }
+      }
+    }
 
     this.broadcastState();
   }
 
+  // 接続を登録から外す。同じ席に別の接続が残っている場合は切断扱いにしない。
+  dropSocket(ws: WebSocket) {
+    this.spectatorSockets.delete(ws);
+    for (const [seat, set] of this.sockets.entries()) {
+      if (!set.has(ws)) continue;
+      set.delete(ws);
+      if (set.size === 0) {
+        this.sockets.delete(seat);
+        if (this.players[seat]) this.players[seat].connected = false;
+      }
+    }
+  }
+
+  // 1接続への送信。切れた接続へのsendは例外を投げることがあるので、
+  // 1つが死んでも他の接続への送信や対局の進行が止まらないよう、ここで吸収して登録から外す。
+  safeSend(ws: WebSocket, json: string): boolean {
+    try {
+      ws.send(json);
+      return true;
+    } catch (e) {
+      console.error('送信失敗(接続を登録から外す):', e);
+      this.dropSocket(ws);
+      return false;
+    }
+  }
+
   send(seat: number, payload: any) {
-    const ws = this.sockets.get(seat);
-    if (ws) ws.send(JSON.stringify(payload));
+    const set = this.sockets.get(seat);
+    if (!set) return;
+    const json = JSON.stringify(payload);
+    for (const ws of [...set]) this.safeSend(ws, json);
   }
   broadcastRaw(payload: any) {
     const json = JSON.stringify(payload);
-    const uniqueSockets = new Set(this.sockets.values());
-    for (const ws of uniqueSockets) ws.send(json);
-    for (const ws of this.spectatorSockets) ws.send(json);
+    const uniqueSockets = new Set<WebSocket>();
+    for (const set of this.sockets.values()) for (const ws of set) uniqueSockets.add(ws);
+    for (const ws of uniqueSockets) this.safeSend(ws, json);
+    for (const ws of [...this.spectatorSockets]) this.safeSend(ws, json);
   }
 
   publicPlayerView(p: Player) {
@@ -442,9 +491,11 @@ export class GameRoom {
     // 同じWebSocket接続が複数の席を持つ場合(開発者モード)があるため、
     // 接続(ws)単位でグループ化してから、1接続につき1通のstateを送る。
     const wsToSeats = new Map<WebSocket, number[]>();
-    for (const [seat, ws] of this.sockets.entries()) {
-      if (!wsToSeats.has(ws)) wsToSeats.set(ws, []);
-      wsToSeats.get(ws)!.push(seat);
+    for (const [seat, set] of this.sockets.entries()) {
+      for (const ws of set) {
+        if (!wsToSeats.has(ws)) wsToSeats.set(ws, []);
+        wsToSeats.get(ws)!.push(seat);
+      }
     }
 
     for (const [ws, seats] of wsToSeats.entries()) {
@@ -456,7 +507,7 @@ export class GameRoom {
       const me = this.players[viewSeat];
       const isMyTurnNow = this.phase === 'playing' && this.currentTurnSeat === viewSeat;
       const riichiDiscards = isMyTurnNow ? this.computeRiichiDiscards(viewSeat) : [];
-      ws.send(JSON.stringify({
+      this.safeSend(ws, JSON.stringify({
         ...base,
         yourSeat: viewSeat,
         devMode: isDev,
@@ -501,8 +552,8 @@ export class GameRoom {
         yourFuriten: this.phase === 'playing' ? this.isFuriten(viewSeat) : false,
       }));
     }
-    for (const ws of this.spectatorSockets) {
-      ws.send(JSON.stringify({ ...base, yourSeat: -1, yourHand: [], yourDrawnTile: null }));
+    for (const ws of [...this.spectatorSockets]) {
+      this.safeSend(ws, JSON.stringify({ ...base, yourSeat: -1, yourHand: [], yourDrawnTile: null }));
     }
   }
 

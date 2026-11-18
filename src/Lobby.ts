@@ -13,7 +13,11 @@ export class Lobby {
       const [client, server] = Object.values(pair) as [WebSocket, WebSocket];
       server.accept();
       this.sockets.add(server);
-      server.send(JSON.stringify({ type: 'onlineCount', count: this.sockets.size }));
+      try {
+        server.send(JSON.stringify({ type: 'onlineCount', count: this.sockets.size }));
+      } catch {
+        // 初回送信の失敗は無視する。次のbroadcastCountで届く。
+      }
       this.broadcastCount();
       server.addEventListener('close', () => {
         this.sockets.delete(server);
@@ -30,6 +34,13 @@ export class Lobby {
 
   broadcastCount() {
     const payload = JSON.stringify({ type: 'onlineCount', count: this.sockets.size });
-    for (const ws of this.sockets) ws.send(payload);
+    for (const ws of [...this.sockets]) {
+      try {
+        ws.send(payload);
+      } catch {
+        // 切れた接続への送信は失敗することがある。1つが死んでも他には送り続ける。
+        this.sockets.delete(ws);
+      }
+    }
   }
 }
