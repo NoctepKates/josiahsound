@@ -213,12 +213,24 @@ function roundLabel(s) {
   return `${wind}${inWind}局`;
 }
 
+// 直前に書き込んだHTMLを領域ごとに覚え、同じ内容なら innerHTML の書き込みを省く。
+// 牌1枚が22要素の3D構造のため、stateのたびに全部作り直すと表示牌数が増えるほど重くなる。
+// 同じHTMLなら作られるDOMも同じなので、書き込みを省いても見た目は変わらない。
+const lastHtmlByKey = new Map();
+function setHtmlIfChanged(el, key, html) {
+  if (!el) return false;
+  if (lastHtmlByKey.get(key) === html) return false;
+  lastHtmlByKey.set(key, html);
+  el.innerHTML = html;
+  return true;
+}
+
 // 左上のドラ表示の枠の下: [1000点棒] x 供託の本数 / [100点棒] x 本場数
 function renderStickCounts(s) {
   const el = document.getElementById('stickCounts');
   if (!el) return;
 
-  el.innerHTML = `
+  setHtmlIfChanged(el, 'stickCounts', `
     <span class="stick-count">
       <span class="stick-1000 stick-icon"></span>
       <span class="stick-x">x ${s.riichiSticks || 0}</span>
@@ -227,7 +239,7 @@ function renderStickCounts(s) {
       <span class="stick-100 stick-icon"></span>
       <span class="stick-x">x ${s.honba || 0}</span>
     </span>
-  `;
+  `);
 }
 
 function escapeHtmlText(str) {
@@ -310,6 +322,25 @@ function flyRiichiStick(divKey) {
   anim.oncancel = done;
 }
 
+// 自分の手牌のHTML。render() と renderHandOnly() で同じものを作る。
+function selfHandTilesHtml(myRiichi) {
+  const drawnId = state.yourDrawnTile?.id ?? null;
+
+  return handOrder.map((tile, idx) =>
+    tileHtml(
+      tile.kind,
+      tile.id === selectedTileId,
+      true,
+      false,
+      idx,
+      // ツモ牌が一番右にあるときだけ、手牌との間隔をあける
+      tile.id === drawnId && idx === handOrder.length - 1,
+      tile.id,
+      myRiichi && tile.id !== drawnId ? 'riichi-locked' : ''
+    )
+  ).join('');
+}
+
 function render(s) {
   state = s;
   canTsumoNow = s.canTsumo === true;
@@ -353,9 +384,9 @@ function render(s) {
 
   if (wallDigits) {
     // 「東n局」(場風 + 局数)と、その下に残り牌数
-    wallDigits.innerHTML =
+    setHtmlIfChanged(wallDigits, 'wallDigits',
       `<div class="round-label">${roundLabel(s)}</div>` +
-      sevenSegNumber(s.wallRemaining, 2);
+      sevenSegNumber(s.wallRemaining, 2));
   }
 
   renderDevBar(s);
@@ -431,12 +462,12 @@ function render(s) {
         divKey +
         (p.riichi ? ' riichi' : '');
 
-      tagEl.innerHTML =
+      setHtmlIfChanged(tagEl, 'tag-' + divKey,
         avatarHtml(p) +
         `<div class="player-name">` +
         `${isDealer ? '<span class="dealer-mark">親</span> ' : ''}` +
         `${escapeHtmlText(p.username)}${p.isCpu ? ' (CPU Lv' + (p.cpuStrength ?? 3) + ')' : ''}${divKey === 'self' && s.yourFuriten ? ' <span style="color:#ff8f8f; font-size:12px;">フリテン</span>' : ''}${p.connected ? '' : ' (切断)'}` +
-        `</div>`;
+        `</div>`);
     }
 
     if (compassEl) {
@@ -461,7 +492,7 @@ function render(s) {
 
       // 各プレイヤーから見て、風は左端、点数は中央(やや中心寄り)、リーチ棒はその外側。
       // 向きは .cell-* ごとに CSS で回転させる。
-      compassEl.innerHTML = `
+      setHtmlIfChanged(compassEl, 'compass-' + divKey, `
         <div class="cc-inner">
           <div class="wind">${WIND_KANJI[windIdx]}</div>
           <div class="score">${p.score}</div>
@@ -469,7 +500,7 @@ function render(s) {
             <div class="riichi-stick stick-1000 ${p.riichi && !flying ? 'active' : ''}"></div>
           </div>
         </div>
-      `;
+      `);
 
       if (justRiichi) {
         requestAnimationFrame(() => flyRiichiStick(divKey));
@@ -489,22 +520,11 @@ function render(s) {
       // ツモ牌が途中に入り、間隔(14px)のぶん後ろの牌がずれて見えていた)
       moveDrawnTileToEnd(drawnId);
 
-      const mainTiles = handOrder.map((tile, idx) =>
-        tileHtml(
-          tile.kind,
-          tile.id === selectedTileId,
-          true,
-          false,
-          idx,
-          tile.id === drawnId && idx === handOrder.length - 1,
-          tile.id,
-          myRiichi && tile.id !== drawnId ? 'riichi-locked' : ''
-        )
-      );
-
-      handEl.innerHTML = mainTiles.join('');
-
-      attachHandHandlers(handEl);
+      // 書き込んだときだけハンドラを付け直す。書き込みを省いた場合は
+      // 残っている要素のハンドラがそのまま生きている。
+      if (setHtmlIfChanged(handEl, 'hand-self', selfHandTilesHtml(myRiichi))) {
+        attachHandHandlers(handEl);
+      }
     } else {
       // 開発者モード + ゴッドビューONなら、他プレイヤーの手牌も実際の牌で表示する
       const devHand = (s.devMode && devGodView && s.devAllHands)
@@ -512,12 +532,12 @@ function render(s) {
         : null;
 
       if (devHand) {
-        handEl.innerHTML =
+        setHtmlIfChanged(handEl, 'hand-' + divKey,
           devHand.hand
             .map((k) => tileHtml(k, false, false, true))
-            .join('');
+            .join(''));
       } else {
-        handEl.innerHTML =
+        setHtmlIfChanged(handEl, 'hand-' + divKey,
           Array.from({ length: p.handCount })
             .map(() =>
               tileHtml(
@@ -527,13 +547,12 @@ function render(s) {
                 true
               )
             )
-            .join('');
+            .join(''));
       }
     }
 
     if (riverEl) {
-      riverEl.innerHTML =
-        renderRiverTiles(p.discards);
+      renderRiver(riverEl, divKey, p.discards);
     }
 
     const meldEl =
@@ -542,7 +561,7 @@ function render(s) {
       );
 
     if (meldEl) {
-      meldEl.innerHTML =
+      setHtmlIfChanged(meldEl, 'meld-' + divKey,
         p.melds
           .map((m) =>
             `<div class="meld-word">${
@@ -562,7 +581,7 @@ function render(s) {
                 .join('')
             }</div>`
           )
-          .join('');
+          .join(''));
     }
   }
 
@@ -585,14 +604,22 @@ function render(s) {
  * そのため卓(transform で台形に射影されている)の外に置き、
  * 卓の手前中央にある目印(#selfHandAnchor)の画面上の位置に合わせる。
  */
+let lastHandLayerPos = '';
+
 function positionSelfHand() {
   const anchor = document.getElementById('selfHandAnchor');
   const layer = document.getElementById('selfHandLayer');
   if (!anchor || !layer) return;
 
   const r = anchor.getBoundingClientRect();
-  layer.style.left = (r.left + r.width / 2) + 'px';
-  layer.style.top = r.bottom + 'px';
+  const left = (r.left + r.width / 2) + 'px';
+  const top = r.bottom + 'px';
+  // 位置が変わっていなければ style の書き込みを省く
+  const pos = left + ',' + top;
+  if (pos === lastHandLayerPos) return;
+  lastHandLayerPos = pos;
+  layer.style.left = left;
+  layer.style.top = top;
 }
 
 window.addEventListener('resize', positionSelfHand);
@@ -698,7 +725,7 @@ function renderDeadWall(s) {
       tiles.push(tileHtml(null, false, false, true));
     }
   }
-  el.innerHTML = tiles.join('');
+  setHtmlIfChanged(el, 'deadWall', tiles.join(''));
 }
 
 // ---------- 開発者モード UI ----------
@@ -716,8 +743,10 @@ function renderDevBar(s) {
     return `<option value="${seatNum}">${label}</option>`;
   }).join('');
   const prevSelected = select.value;
-  select.innerHTML = options;
-  if ([...select.options].some((o) => o.value === prevSelected)) select.value = prevSelected;
+  // 選択肢が変わったときだけ作り直し、選んでいた席を戻す
+  if (setHtmlIfChanged(select, 'devBar', options)) {
+    if ([...select.options].some((o) => o.value === prevSelected)) select.value = prevSelected;
+  }
 }
 
 function renderDevWall(s) {
@@ -760,7 +789,7 @@ function renderDevWall(s) {
     `;
   }
 
-  tilesEl.innerHTML = html;
+  setHtmlIfChanged(tilesEl, 'devWall', html);
   modal.classList.remove('hidden');
 }
 
@@ -1012,26 +1041,11 @@ function renderHandOnly() {
   const handEl = document.getElementById('hand-self');
   if (!handEl) return;
 
-  const drawnId = state?.yourDrawnTile?.id ?? null;
   const myRiichi = state?.yourSeat !== -1 && state?.players[state.yourSeat]?.riichi === true;
 
-  const mainTiles = handOrder.map((tile, idx) =>
-    tileHtml(
-      tile.kind,
-      tile.id === selectedTileId,
-      true,
-      false,
-      idx,
-      // ツモ牌が一番右にあるときだけ、手牌との間隔をあける
-      tile.id === drawnId && idx === handOrder.length - 1,
-      tile.id,
-      myRiichi && tile.id !== drawnId ? 'riichi-locked' : ''
-    )
-  );
-
-  handEl.innerHTML = mainTiles.join('');
-
-  attachHandHandlers(handEl);
+  if (setHtmlIfChanged(handEl, 'hand-self', selfHandTilesHtml(myRiichi))) {
+    attachHandHandlers(handEl);
+  }
 }
 
 function canDeclareRiichi() {
@@ -1234,7 +1248,7 @@ function renderWaitPreview() {
     !previewData ||
     previewData.tileId !== selectedTileId
   ) {
-    el.innerHTML = '';
+    setHtmlIfChanged(el, 'waitPreview', '');
     el.classList.add('hidden');
     return;
   }
@@ -1244,12 +1258,12 @@ function renderWaitPreview() {
   const waits = previewData.waits || [];
 
   if (waits.length === 0) {
-    el.innerHTML =
-      '<div class="wait-warning">この牌を切るとテンパイが崩れるため、リーチできません</div>';
+    setHtmlIfChanged(el, 'waitPreview',
+      '<div class="wait-warning">この牌を切るとテンパイが崩れるため、リーチできません</div>');
     return;
   }
 
-  el.innerHTML =
+  setHtmlIfChanged(el, 'waitPreview',
     (previewData.furiten
       ? '<div class="furiten-label">フリテン</div>'
       : '') +
@@ -1265,7 +1279,7 @@ function renderWaitPreview() {
           )}<div class="wait-count">残り${w.remaining}枚</div></div>`
       )
       .join('') +
-    '</div>';
+    '</div>');
 }
 
 // リーチした後、引いた牌であがれないときは自動でツモ切りする。
@@ -1995,21 +2009,32 @@ function digitHtml(ch) {
   `;
 }
 
+const RIVER_BLOCK_SIZE = 30;
+
+function riverBlockWidth() {
+  return 'calc(6 * var(--tile-w) + 5 * var(--tile-gap))';
+}
+
+// 川のブロック(<div class="river-block">)の開始タグ。
+// renderRiverTiles(全部作り直し)と appendRiverTiles(増えた分だけ足す)で同じものを使う。
+function riverBlockOpenHtml(blockIndex) {
+  return `
+      <div
+        class="river-block"
+        style="left: calc(${blockIndex} * ${riverBlockWidth()});"
+      >`;
+}
+
 function renderRiverTiles(discards) {
   const blocks = [];
 
-  const blockWidth =
-    'calc(6 * var(--tile-w) + 5 * var(--tile-gap))';
+  for (let i = 0; i < discards.length; i += RIVER_BLOCK_SIZE) {
+    const block = discards.slice(i, i + RIVER_BLOCK_SIZE);
+    const blockIndex = i / RIVER_BLOCK_SIZE;
 
-  for (let i = 0; i < discards.length; i += 30) {
-    const block = discards.slice(i, i + 30);
-    const blockIndex = i / 30;
-
-    blocks.push(`
-      <div
-        class="river-block"
-        style="left: calc(${blockIndex} * ${blockWidth});"
-      >
+    blocks.push(
+      riverBlockOpenHtml(blockIndex) +
+      `
         ${block
           .map((k) =>
             tileHtml(
@@ -2025,6 +2050,56 @@ function renderRiverTiles(discards) {
   }
 
   return blocks.join('');
+}
+
+// 席ごとに、今までに川へ描いた捨て牌の文字配列。
+// 川は局の間ずっと「追加のみ」なので、増えた分だけ末尾に足せば
+// 全部作り直すのと同じ見た目になる。
+const riverRendered = {};
+
+function renderRiver(riverEl, divKey, discards) {
+  const prev = riverRendered[divKey];
+  const expectedBlocks = prev ? Math.ceil(prev.length / RIVER_BLOCK_SIZE) : 0;
+
+  // 描き済みの分がそのまま先頭に残っていて、ブロック数も合っていれば増えた分だけ足す。
+  // 新しい局(川が空に戻る)や、食い違いがあれば全部作り直す。
+  if (
+    prev &&
+    discards.length >= prev.length &&
+    riverEl.childElementCount === expectedBlocks &&
+    prev.every((k, i) => discards[i] === k)
+  ) {
+    const extra = discards.slice(prev.length);
+    if (extra.length > 0) {
+      appendRiverTiles(riverEl, prev.length, extra);
+      riverRendered[divKey] = discards.slice();
+    }
+    return;
+  }
+
+  riverEl.innerHTML = renderRiverTiles(discards);
+  riverRendered[divKey] = discards.slice();
+}
+
+function appendRiverTiles(riverEl, startIndex, kinds) {
+  let idx = startIndex;
+  let blockEl = riverEl.lastElementChild;
+
+  for (const kind of kinds) {
+    // ブロックの先頭(30枚ごと)か、ブロックが無ければ新しいブロックを作る
+    if (idx % RIVER_BLOCK_SIZE === 0 || !blockEl) {
+      riverEl.insertAdjacentHTML(
+        'beforeend',
+        riverBlockOpenHtml(Math.floor(idx / RIVER_BLOCK_SIZE)) + '</div>'
+      );
+      blockEl = riverEl.lastElementChild;
+    }
+    blockEl.insertAdjacentHTML(
+      'beforeend',
+      tileHtml(kind, false, false, true)
+    );
+    idx++;
+  }
 }
 
 function sevenSegNumber(
