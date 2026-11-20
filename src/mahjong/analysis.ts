@@ -108,7 +108,7 @@ export function analyzeWin(
       words: d.words,
       dict,
       doraIndicators: opts.doraIndicators ?? [],
-      handWithDoraCount: opts.doraCount ?? 0,
+      doraCount: opts.doraCount ?? 0,
       riichi: !!opts.riichi,
       ippatsu: !!opts.ippatsu,
       isDealer: !!opts.isDealer,

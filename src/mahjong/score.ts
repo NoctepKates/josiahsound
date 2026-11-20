@@ -6,7 +6,9 @@ export interface ScoreInput {
   words: string[];        // 和了時の分解に使われた単語リスト（14枚ぶん）
   dict: WordDef[];        // 飜数参照用の辞書
   doraIndicators: string[]; // ドラ表示牌（複数：通常1〜、裏ドラ含めるなら追加で渡す）
-  handWithDoraCount: number; // 手牌中のドラ枚数（表ドラ+裏ドラの合計。呼び出し側で数える）
+  doraCount: number;      // 手牌中の表ドラ枚数
+  uraDoraCount?: number;  // 手牌中の裏ドラ枚数（リーチした人のみ）
+  honba?: number;         // 本場数（0のとき加算なし）
   riichi: boolean;
   ippatsu: boolean;
   isDealer: boolean;
@@ -53,6 +55,7 @@ export function computeHan(
   doraCount: number,
   riichi: boolean,
   ippatsu: boolean,
+  uraDoraCount = 0,
 ): {
   han: number;
   hasYakuman: boolean;
@@ -129,11 +132,20 @@ export function computeHan(
     breakdown.push({ label: '一発', han: 1 });
   }
 
+  // 表ドラと裏ドラは分けて、役一覧の最後に表示する
   if (doraCount > 0) {
     han += doraCount;
     breakdown.push({
-      label: `ドラ${doraCount}`,
+      label: 'ドラ',
       han: doraCount,
+    });
+  }
+
+  if (uraDoraCount > 0) {
+    han += uraDoraCount;
+    breakdown.push({
+      label: '裏ドラ',
+      han: uraDoraCount,
     });
   }
 
@@ -183,9 +195,10 @@ export function computeScore(input: ScoreInput): ScoreResult {
   const { han, hasYakuman, breakdown } = computeHan(
     input.words,
     input.dict,
-    input.handWithDoraCount,
+    input.doraCount,
     input.riichi,
     input.ippatsu,
+    input.uraDoraCount ?? 0,
   );
 
   const limit = limitFor(han, hasYakuman);
@@ -200,19 +213,24 @@ export function computeScore(input: ScoreInput): ScoreResult {
 
   const roundUp100 = (n: number) => Math.ceil(n / 100) * 100;
 
+  // 本場分は支払いに加算する。ロンなら放銃者が300点/本場、
+  // ツモなら各家が100点/本場ずつ払う(4人なら合計300点/本場)。
+  const honba = input.honba ?? 0;
+
   let total = 0;
   let fromNonDealer: number | undefined;
   let fromDealer: number | undefined;
 
   if (input.winType === 'ron') {
     total = input.isDealer ? roundUp100(basePoints * 6) : roundUp100(basePoints * 4);
+    total += 300 * honba;
   } else {
     if (input.isDealer) {
-      fromNonDealer = roundUp100(basePoints * 2);
+      fromNonDealer = roundUp100(basePoints * 2) + 100 * honba;
       total = fromNonDealer * 3;
     } else {
-      fromNonDealer = roundUp100(basePoints * 1);
-      fromDealer = roundUp100(basePoints * 2);
+      fromNonDealer = roundUp100(basePoints * 1) + 100 * honba;
+      fromDealer = roundUp100(basePoints * 2) + 100 * honba;
       total = fromNonDealer * 2 + fromDealer;
     }
   }

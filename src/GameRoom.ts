@@ -1234,13 +1234,13 @@ export class GameRoom {
     this.finishHandByTsumo(seat, decomps);
   }
 
-  bestDecomposition(chars: string[], doraCount: number, riichi: boolean, ippatsu: boolean, isDealer: boolean, winType: 'ron' | 'tsumo') {
+  bestDecomposition(chars: string[], doraCount: number, uraDoraCount: number, riichi: boolean, ippatsu: boolean, isDealer: boolean, winType: 'ron' | 'tsumo') {
     const decomps = findAllDecompositions(chars, this.wordDict, 200);
     let best = null as any;
     for (const d of decomps) {
       const s = computeScore({
         words: d.words, dict: this.wordDict, doraIndicators: this.doraIndicators,
-        handWithDoraCount: doraCount, riichi, ippatsu, isDealer, winType,
+        doraCount, uraDoraCount, honba: this.honba, riichi, ippatsu, isDealer, winType,
       });
       if (!best || s.payments.total > best.score.payments.total) best = { decomp: d, score: s };
     }
@@ -1295,8 +1295,9 @@ export class GameRoom {
     const chars = this.handCharsForWinCheck(p);
     const isDealer = seat === this.dealerSeat;
     // 裏ドラはリーチした人の和了のときにだけ数える
-    const doraCount = this.countDora(p.hand, p.melds) + (p.riichi ? this.countUraDora(p.hand, p.melds) : 0);
-    const best = this.bestDecomposition(chars, doraCount, p.riichi, p.ippatsuActive, isDealer, 'tsumo');
+    const doraCount = this.countDora(p.hand, p.melds);
+    const uraDoraCount = p.riichi ? this.countUraDora(p.hand, p.melds) : 0;
+    const best = this.bestDecomposition(chars, doraCount, uraDoraCount, p.riichi, p.ippatsuActive, isDealer, 'tsumo');
     if (!best) return;
     const { score } = best;
     const before = this.players.map((pl) => pl.score);
@@ -1344,8 +1345,9 @@ export class GameRoom {
       const chars = [...this.handCharsForWinCheck(p), tile.kind];
       const isDealer = seat === this.dealerSeat;
       // 裏ドラはリーチした人の和了のときにだけ数える
-      const doraCount = this.countDora([...p.hand, tile], p.melds) + (p.riichi ? this.countUraDora([...p.hand, tile], p.melds) : 0);
-      const best = this.bestDecomposition(chars, doraCount, p.riichi, p.ippatsuActive, isDealer, 'ron');
+      const doraCount = this.countDora([...p.hand, tile], p.melds);
+      const uraDoraCount = p.riichi ? this.countUraDora([...p.hand, tile], p.melds) : 0;
+      const best = this.bestDecomposition(chars, doraCount, uraDoraCount, p.riichi, p.ippatsuActive, isDealer, 'ron');
       if (!best) continue;
       if (isDealer) dealerWon = true;
       this.players[discarderSeat].score -= best.score.payments.total;
