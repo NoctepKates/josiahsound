@@ -22,6 +22,8 @@ export interface AnalyzeOptions {
   winType?: 'ron' | 'tsumo';
   doraCount?: number;
   doraIndicators?: string[];
+  uraDoraCount?: number; // 手牌中の裏ドラ枚数(リーチしたときだけ数える。実戦と同じ)
+  honba?: number; // 本場数(0のとき加算なし)
 }
 
 export interface WordInfo {
@@ -109,6 +111,9 @@ export function analyzeWin(
       dict,
       doraIndicators: opts.doraIndicators ?? [],
       doraCount: opts.doraCount ?? 0,
+      // 裏ドラはリーチしたときだけ数える(実戦 GameRoom と同じ規則)。
+      uraDoraCount: opts.riichi ? (opts.uraDoraCount ?? 0) : 0,
+      honba: opts.honba ?? 0,
       riichi: !!opts.riichi,
       ippatsu: !!opts.ippatsu,
       isDealer: !!opts.isDealer,

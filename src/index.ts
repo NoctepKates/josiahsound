@@ -286,6 +286,8 @@ export default {
             isDealer?: boolean;
             winType?: string;
             doraCount?: number;
+            uraDoraCount?: number;
+            honba?: number;
           };
         };
 
@@ -331,6 +333,8 @@ export default {
           isDealer: !!o.isDealer,
           winType: o.winType === 'ron' ? 'ron' : 'tsumo',
           doraCount: Math.max(0, Math.floor(Number(o.doraCount) || 0)),
+          uraDoraCount: Math.max(0, Math.floor(Number(o.uraDoraCount) || 0)),
+          honba: Math.max(0, Math.floor(Number(o.honba) || 0)),
         });
 
         // 実戦(GameRoom)と同じ判定関数(analyzeHand)の結果をそのまま返す。
