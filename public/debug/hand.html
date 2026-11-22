@@ -363,6 +363,14 @@
         ドラ枚数
         <input type="number" id="optDora" min="0" max="14" value="0">
       </label>
+      <label>
+        裏ドラ枚数
+        <input type="number" id="optUra" min="0" max="14" value="0">
+      </label>
+      <label>
+        本場
+        <input type="number" id="optHonba" min="0" max="99" value="0">
+      </label>
     </div>
   </section>
 
@@ -686,7 +694,9 @@ function readOptions() {
     ippatsu: $('optIppatsu').checked,
     isDealer: $('optDealer').checked,
     winType: $('optWinType').value,
-    doraCount: Number($('optDora').value) || 0
+    doraCount: Number($('optDora').value) || 0,
+    uraDoraCount: Number($('optUra').value) || 0,
+    honba: Number($('optHonba').value) || 0
   };
 }
 
@@ -1017,7 +1027,7 @@ $('random14Btn')
     () => randomHand(14)
   );
 
-['optRiichi', 'optIppatsu', 'optDealer', 'optWinType', 'optDora']
+['optRiichi', 'optIppatsu', 'optDealer', 'optWinType', 'optDora', 'optUra', 'optHonba']
   .forEach((id) => {
     $(id).addEventListener('change', scheduleCheck);
     $(id).addEventListener('input', scheduleCheck);
