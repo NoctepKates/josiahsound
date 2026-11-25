@@ -1760,6 +1760,32 @@ body {
 
 
 /* =========================================================
+   開発者モード: ヘッダーのバー
+   ========================================================= */
+
+.dev-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+
+  font-size: 13px;
+}
+
+.dev-badge {
+  padding: 2px 8px;
+
+  border: 1px solid #d9b46a;
+  border-radius: 999px;
+
+  color: #d9b46a;
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+
+/* =========================================================
    開発者モード: 山の確認(「山を見る」)
    ========================================================= */
 
@@ -2169,6 +2195,19 @@ body {
   display: flex;
   align-items: center;
   gap: 4px;
+}
+
+/* 親マーク: 名前の前に付く小さなバッジ(金枠アバターと色をそろえる) */
+.dealer-mark {
+  padding: 1px 6px;
+
+  border-radius: 999px;
+  background: #d9b46a;
+
+  color: #20283a;
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1.5;
 }
 
 /* 画像が付いた分、隅のタグは高くなるので、鳴いた単語はその外側に置く */
@@ -2666,4 +2705,71 @@ body {
   gap: 2px;
   font-size: 13px;
   color: var(--text-sub, #9aa7c7);
+}
+
+
+/* =========================================================
+   横向き専用(スマホ)
+   ・縦持ちスマホでは回転案内を全画面で出す
+   ・横向きの低い画面では、ヘッダーと手牌の分を差し引いて卓を収める
+   ========================================================= */
+
+.rotate-prompt {
+  display: none;
+}
+
+@media (max-width: 640px) and (orientation: portrait) {
+  .rotate-prompt {
+    display: flex;
+    position: fixed;
+    inset: 0;
+    z-index: 300;
+
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+
+    padding: 24px;
+    background: #0d1526;
+    color: #e8d9b0;
+    text-align: center;
+  }
+
+  /* スマホの輪郭が横向きに回るアニメーション */
+  .rotate-prompt-phone {
+    width: 34px;
+    height: 56px;
+    margin-bottom: 10px;
+
+    border: 3px solid #d9b46a;
+    border-radius: 8px;
+
+    animation: rotatePromptTurn 2.4s ease-in-out infinite;
+  }
+
+  .rotate-prompt-main {
+    font-size: 18px;
+    font-weight: 800;
+  }
+
+  .rotate-prompt-sub {
+    font-size: 13px;
+    color: #9aa7c7;
+  }
+}
+
+@keyframes rotatePromptTurn {
+  0%, 25% { transform: rotate(0deg); }
+  60%, 100% { transform: rotate(90deg); }
+}
+
+/* 横向きの低い画面(スマホ横持ち等): 卓が画面からはみ出さないようにする */
+@media (max-height: 500px) {
+  .table-wrap {
+    width: min(96vw, calc(100vh - 84px), 900px);
+    height: min(96vw, calc(100vh - 84px), 900px);
+    width: min(96vw, calc(100dvh - 84px), 900px);
+    height: min(96vw, calc(100dvh - 84px), 900px);
+  }
 }

@@ -176,6 +176,7 @@ export default {
 
         // remember meがOFFの場合はMax-Ageを付けずブラウザを閉じたら消えるセッションCookieにする
         const cookieParts = [`session=${token}`, 'Path=/', 'HttpOnly', 'SameSite=Lax'];
+        if (url.protocol === 'https:') cookieParts.push('Secure');
         if (remembered) cookieParts.push(`Max-Age=${ttlSeconds}`);
 
         return json({ ok: true, user: { userId: user.userId, username: user.username } }, {
